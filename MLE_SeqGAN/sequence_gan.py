@@ -1,4 +1,4 @@
-import model
+import LSTM_model
 import numpy as np
 import tensorflow as tf
 import random
@@ -24,7 +24,7 @@ SEED = 88
 BATCH_SIZE = 64
 ##########################################################################################
 
-TOTAL_BATCH = 800
+TOTAL_BATCH = 50
 
 #########################################################################################
 #  Discriminator  Hyper-parameters
@@ -150,7 +150,7 @@ def main():
     # config.gpu_options.per_process_gpu_memory_fraction = 0.5
     config.gpu_options.allow_growth = True
     sess = tf.Session(config=config)
-    sess.run(tf.global_variables_initializer)
+    sess.run(tf.global_variables_initializer())
 
     generate_samples(sess, target_lstm, 64, 10000, positive_file)
     gen_data_loader.create_batches(positive_file)
