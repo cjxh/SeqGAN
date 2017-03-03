@@ -1,0 +1,2 @@
+model_checkpoint_path: "pretrain-experiment-weights-20170303-023432"
+all_model_checkpoint_paths: "pretrain-experiment-weights-20170303-023432"
