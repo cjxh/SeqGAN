@@ -5,6 +5,7 @@ import random
 from gen_dataloader import Gen_Data_loader, Likelihood_data_loader
 from target_lstm import TARGET_LSTM
 import cPickle
+import time
 
 #########################################################################################
 #  Generator  Hyper-parameters
@@ -75,6 +76,7 @@ def pre_train_epoch(sess, trainable_model, data_loader):
 def main():
     random.seed(SEED)
     np.random.seed(SEED)
+    curr_time = time.strftime('%Y%m%d-%H%M%S')
 
     assert START_TOKEN == 0
 
@@ -96,9 +98,11 @@ def main():
     gen_data_loader.create_batches(positive_file)
 
     log = open('log/experiment-log.txt', 'w')
+    saver = tf.train.Saver()
     #  pre-train generator
     print 'Start pre-training...'
     log.write('pre-training...\n')
+    losses = np.zeros((PRE_EPOCH_NUM, 2))
     for epoch in xrange(PRE_EPOCH_NUM):
         print 'pre-train epoch:', epoch
         loss = pre_train_epoch(sess, generator, gen_data_loader)
@@ -109,14 +113,17 @@ def main():
             print 'pre-train epoch ', epoch, 'test_loss ', test_loss
             buffer = str(epoch) + ' ' + str(test_loss) + '\n'
             log.write(buffer)
+            losses[epoch/5] = [epoch, test_loss]
+            saver.save(sess, 'save/pretrain-experiment-weights-' + curr_time)
 
     generate_samples(sess, generator, BATCH_SIZE, generated_num, eval_file)
     likelihood_data_loader.create_batches(eval_file)
     test_loss = target_loss(sess, target_lstm, likelihood_data_loader)
     buffer = 'After supervised-training:' + ' ' + str(test_loss) + '\n'
     log.write(buffer)
-
     log.close()
+    with open('save/pretrain-experiment-loss-' + curr_time, 'w') as f:
+        cPickle.dump(losses, f, -1)
 
 
 if __name__ == '__main__':
