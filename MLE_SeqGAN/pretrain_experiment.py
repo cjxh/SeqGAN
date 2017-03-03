@@ -4,21 +4,17 @@ import tensorflow as tf
 import random
 from gen_dataloader import Gen_Data_loader, Likelihood_data_loader
 from target_lstm import TARGET_LSTM
-import cPickle
+import cPickle, yaml
 import time
+from config import GenConfig
+TIME = time.strftime('%Y%m%d-%H%M%S')
 
 #########################################################################################
 #  Generator  Hyper-parameters
 #########################################################################################
-EMB_DIM = 32
-HIDDEN_DIM = 32
-SEQ_LENGTH = 20
-START_TOKEN = 0
-
-PRE_EPOCH_NUM = 350  # change the pre-train epoch here
-TRAIN_ITER = 1  # generator
-SEED = 88
-BATCH_SIZE = 64
+CONFIG = GenConfig()
+with open('save/mle-config-'+TIME+'.yaml', 'w') as f:
+    yaml.dump(CONFIG, f)
 
 ##########################################################################################
 positive_file = 'save/real_data.txt'
@@ -27,14 +23,14 @@ eval_file = 'target_generate/eval_file.txt'
 
 generated_num = 10000
 
-
 class PoemGen(model.LSTM):
     def g_optimizer(self, *args, **kwargs):
         return tf.train.AdamOptimizer()  # ignore learning rate
 
 
 def get_trainable_model(num_emb):
-    return PoemGen(num_emb, BATCH_SIZE, EMB_DIM, HIDDEN_DIM, SEQ_LENGTH, START_TOKEN)
+    return PoemGen(num_emb, CONFIG.BATCH_SIZE, CONFIG.EMB_DIM, CONFIG.HIDDEN_DIM, CONFIG.SEQ_LENGTH, \
+        CONFIG.START_TOKEN)
 
 
 def generate_samples(sess, trainable_model, batch_size, generated_num, output_file):
@@ -74,14 +70,13 @@ def pre_train_epoch(sess, trainable_model, data_loader):
 
 
 def main():
-    random.seed(SEED)
-    np.random.seed(SEED)
-    curr_time = time.strftime('%Y%m%d-%H%M%S')
+    random.seed(CONFIG.SEED)
+    np.random.seed(CONFIG.SEED)
 
-    assert START_TOKEN == 0
+    assert CONFIG.START_TOKEN == 0
 
-    gen_data_loader = Gen_Data_loader(BATCH_SIZE)
-    likelihood_data_loader = Likelihood_data_loader(BATCH_SIZE)
+    gen_data_loader = Gen_Data_loader(CONFIG.BATCH_SIZE)
+    likelihood_data_loader = Likelihood_data_loader(CONFIG.BATCH_SIZE)
     vocab_size = 5000
 
     generator = get_trainable_model(vocab_size)
@@ -102,27 +97,30 @@ def main():
     #  pre-train generator
     print 'Start pre-training...'
     log.write('pre-training...\n')
-    losses = np.zeros((PRE_EPOCH_NUM, 2))
-    for epoch in xrange(PRE_EPOCH_NUM):
+    losses = np.zeros((CONFIG.PRE_EPOCH_NUM / 5, 2))
+    for epoch in xrange(CONFIG.PRE_EPOCH_NUM):
         print 'pre-train epoch:', epoch
         loss = pre_train_epoch(sess, generator, gen_data_loader)
         if epoch % 5 == 0:
-            generate_samples(sess, generator, BATCH_SIZE, generated_num, eval_file)
+            generate_samples(sess, generator, CONFIG.BATCH_SIZE, generated_num, eval_file)
             likelihood_data_loader.create_batches(eval_file)
             test_loss = target_loss(sess, target_lstm, likelihood_data_loader)
             print 'pre-train epoch ', epoch, 'test_loss ', test_loss
             buffer = str(epoch) + ' ' + str(test_loss) + '\n'
             log.write(buffer)
             losses[epoch/5] = [epoch, test_loss]
-            saver.save(sess, 'save/pretrain-experiment-weights-' + curr_time)
+        if epoch % 50 == 0:
+            saver.save(sess, 'save/mle-weights-' + TIME)
+            with open('save/mle-loss-' + TIME + '.pkl', 'w') as f:
+                cPickle.dump(losses, f, -1)
 
-    generate_samples(sess, generator, BATCH_SIZE, generated_num, eval_file)
+    generate_samples(sess, generator, CONFIG.BATCH_SIZE, generated_num, eval_file)
     likelihood_data_loader.create_batches(eval_file)
     test_loss = target_loss(sess, target_lstm, likelihood_data_loader)
     buffer = 'After supervised-training:' + ' ' + str(test_loss) + '\n'
     log.write(buffer)
     log.close()
-    with open('save/pretrain-experiment-loss-' + curr_time, 'w') as f:
+    with open('save/mle-loss-' + TIME + '.pkl', 'w') as f:
         cPickle.dump(losses, f, -1)
 
 
