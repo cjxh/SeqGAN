@@ -1,2 +1,2 @@
-model_checkpoint_path: "pretrain-experiment-weights-20170303-023432"
-all_model_checkpoint_paths: "pretrain-experiment-weights-20170303-023432"
+model_checkpoint_path: "mle-sess-20170304-035414.ckpt"
+all_model_checkpoint_paths: "mle-sess-20170304-035414.ckpt"
