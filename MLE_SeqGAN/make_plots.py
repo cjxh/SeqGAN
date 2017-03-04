@@ -3,7 +3,7 @@ import cPickle
 import numpy as np
   
 # Read the data into a pandas DataFrame.      
-data = cPickle.load(open('save/mle-loss-20170303-023432.pkl'))
+data = cPickle.load(open('save/mle-loss-20170304-015334.pkl'))
 
 # These are the "Tableau 20" colors as RGB.    
 tableau20 = [(31, 119, 180), (174, 199, 232), (255, 127, 14), (255, 187, 120),    
@@ -33,7 +33,8 @@ ax.spines["left"].set_visible(False)
 # Ticks on the right and top of the plot are generally unnecessary chartjunk.    
 ax.get_xaxis().tick_bottom()    
 ax.get_yaxis().tick_left()  
-xmin, xmax, ymin, ymax = 0, 350, 8.5, 10.5  
+print data[0,0], data[-1,0]
+xmin, xmax, ymin, ymax = data[0, 0], data[-1, 0], 8.5, 10.5  
   
 # Limit the range of the plot to only where the data is.    
 # Avoid unnecessary whitespace.    
@@ -52,7 +53,7 @@ plt.title('Learning curve', fontsize=30)
 # the axis ticks. Make sure that the lines are light and small so they    
 # don't obscure the primary data lines.    
 for y in np.linspace(ymin, ymax, 5):
-    plt.plot(range(xmin, xmax), [y] * len(range(xmin, xmax)), "--", lw=0.5, color="black", alpha=0.3)    
+    plt.plot(range(int(xmin), int(xmax)), [y] * len(range(int(xmin), int(xmax))), "--", lw=0.5, color="black", alpha=0.3)    
   
 # Remove the tick marks; they are unnecessary with the tick lines we just plotted.    
 plt.tick_params(axis="both", which="both", bottom="off", top="off",    
@@ -74,7 +75,7 @@ for rank, column in enumerate(methods):
   
     # Again, make sure that all labels are large enough to be easily read    
     # by the viewer.    
-    plt.text(351.5, y_pos, column, fontsize=14, color=tableau20[rank])        
+    plt.text(xmax + 1.5, y_pos, column, fontsize=14, color=tableau20[rank])        
     
   
 # Finally, save the figure as a PNG.    

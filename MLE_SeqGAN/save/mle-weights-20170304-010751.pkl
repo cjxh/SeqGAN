@@ -1,18 +1,0 @@
-Ä]q(ctensorflow.python.ops.variables
-Variable
-q)Åq}q(U	_variableqctensorflow.python.framework.ops
-Tensor
-q)Åq}q(U_opq	ctensorflow.python.framework.ops
-Operation
-q
-)Åq}q(U_graphqctensorflow.python.framework.ops
-Graph
-q)Åq}q(U_default_original_opqNU_handle_feedersq}U_collectionsq}q(U__variable_storeÖq]qctensorflow.python.ops.variable_scope
-_VariableStore
-q)Åq}q(U_varsq}U_partitioned_varsq}U_variable_scopes_countq}qU	generatorqKsubaUtrainable_variablesq]q (h)Åq!}q"(hh)Åq#}q$(h	h
-)Åq%}q&(hhU_control_inputsq']U_outputsq(]q)h#aU_control_flow_contextq*NU	_id_valueq+KU_original_opq,NU
-_tracebackq-]q.((Upretrain_experiment.pyq/KÖU<module>q0}q1(Ugenerate_samplesq2c__main__
-generate_samples
-Upre_train_epochq3c__main__
-pre_train_epoch
-Urandomq4

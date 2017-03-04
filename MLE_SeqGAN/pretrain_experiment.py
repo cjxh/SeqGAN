@@ -8,7 +8,6 @@ import cPickle, yaml
 import time, sys
 from config import GenConfig
 TIME = time.strftime('%Y%m%d-%H%M%S')
-
 sys.setrecursionlimit(100000)
 
 #########################################################################################
@@ -112,7 +111,7 @@ def main():
 
         # Every 50 epochs, save loss and weights to disk
         if epoch % 50 == 0:
-            generator.save('save/mle-weights-' + TIME + '.pkl')
+            generator.save('save/mle-generator-' + TIME + '.pkl')
             with open('save/mle-loss-' + TIME + '.pkl', 'w') as f:
                 cPickle.dump(losses, f, -1)
 
@@ -122,7 +121,7 @@ def main():
     losses[CONFIG.PRE_EPOCH_NUM / 5] = [CONFIG.PRE_EPOCH_NUM, test_loss]
 
     # Save final loss and weights to disk
-    generator.save('save/mle-weights-' + TIME + '.pkl')
+    generator.save('save/mle-generator-' + TIME + '.pkl')
     with open('save/mle-loss-' + TIME + '.pkl', 'w') as f:
         cPickle.dump(losses, f, -1)
 
