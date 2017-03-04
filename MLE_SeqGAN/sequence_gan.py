@@ -8,7 +8,7 @@ from dis_dataloader import Dis_dataloader
 from text_classifier import TextCNN
 from rollout import ROLLOUT
 from target_lstm import TARGET_LSTM
-import cPickle, yaml
+import cPickle, yaml, dill
 import time
 from config import GenConfig
 TIME = time.strftime('%Y%m%d-%H%M%S')
@@ -38,7 +38,7 @@ dis_num_epochs = 3
 dis_alter_epoch = 50
 #########################################################################################
 
-with open('save/mle-config-'+TIME+'.yaml', 'w') as f:
+with open('save/seqgan-config-'+TIME+'.yaml', 'w') as f:
     yaml.dump(GCONFIG, f)
 
 positive_file = 'save/real_data.txt'
@@ -125,6 +125,7 @@ def main():
     vocab_size = 5000
     dis_data_loader = Dis_dataloader()
 
+
     best_score = 1000
     generator = get_trainable_model(vocab_size)
     target_params = cPickle.load(open('save/target_params.pkl'))
@@ -147,35 +148,39 @@ def main():
     dis_grads_and_vars = dis_optimizer.compute_gradients(cnn.loss, cnn_params, aggregation_method=2)
     dis_train_op = dis_optimizer.apply_gradients(dis_grads_and_vars, global_step=dis_global_step)
 
+    ##### All variables have been created ##########
+    saver = tf.train.Saver()
+
     config = tf.ConfigProto()
     # config.gpu_options.per_process_gpu_memory_fraction = 0.5
     config.gpu_options.allow_growth = True
     sess = tf.Session(config=config)
     sess.run(tf.global_variables_initializer())
+    saver.restore(sess, 'save/mle-weights-20170303-023432.data-00000-of-00001')
 
     generate_samples(sess, target_lstm, 64, 10000, positive_file)
     gen_data_loader.create_batches(positive_file)
 
-    log = open('log/experiment-log.txt', 'w')
-    #  pre-train generator
-    print 'Start pre-training...'
-    log.write('pre-training...\n')
-    for epoch in xrange(GCONFIG.PRE_EPOCH_NUM):
-        print 'pre-train epoch:', epoch
-        loss = pre_train_epoch(sess, generator, gen_data_loader)
-        if epoch % 5 == 0:
-            generate_samples(sess, generator, GCONFIG.BATCH_SIZE, generated_num, eval_file)
-            likelihood_data_loader.create_batches(eval_file)
-            test_loss = target_loss(sess, target_lstm, likelihood_data_loader)
-            print 'pre-train epoch ', epoch, 'test_loss ', test_loss
-            buffer = str(epoch) + ' ' + str(test_loss) + '\n'
-            log.write(buffer)
+    # log = open('log/experiment-log.txt', 'w')
+    # #  pre-train generator
+    # print 'Start pre-training...'
+    # log.write('pre-training...\n')
+    # for epoch in xrange(GCONFIG.PRE_EPOCH_NUM):
+    #     print 'pre-train epoch:', epoch
+    #     loss = pre_train_epoch(sess, generator, gen_data_loader)
+    #     if epoch % 5 == 0:
+    #         generate_samples(sess, generator, GCONFIG.BATCH_SIZE, generated_num, eval_file)
+    #         likelihood_data_loader.create_batches(eval_file)
+    #         test_loss = target_loss(sess, target_lstm, likelihood_data_loader)
+    #         print 'pre-train epoch ', epoch, 'test_loss ', test_loss
+    #         buffer = str(epoch) + ' ' + str(test_loss) + '\n'
+    #         log.write(buffer)
 
-    generate_samples(sess, generator, GCONFIG.BATCH_SIZE, generated_num, eval_file)
-    likelihood_data_loader.create_batches(eval_file)
-    test_loss = target_loss(sess, target_lstm, likelihood_data_loader)
-    buffer = 'After pre-training:' + ' ' + str(test_loss) + '\n'
-    log.write(buffer)
+    # generate_samples(sess, generator, GCONFIG.BATCH_SIZE, generated_num, eval_file)
+    # likelihood_data_loader.create_batches(eval_file)
+    # test_loss = target_loss(sess, target_lstm, likelihood_data_loader)
+    # buffer = 'After pre-training:' + ' ' + str(test_loss) + '\n'
+    # log.write(buffer)
 
     generate_samples(sess, generator, GCONFIG.BATCH_SIZE, generated_num, eval_file)
     likelihood_data_loader.create_batches(eval_file)

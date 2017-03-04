@@ -14,7 +14,7 @@ sys.setrecursionlimit(100000)
 #  Generator  Hyper-parameters
 #########################################################################################
 CONFIG = GenConfig()
-CONFIG.PRE_EPOCH_NUM = 240
+CONFIG.PRE_EPOCH_NUM = 50
 with open('save/mle-config-'+TIME+'.yaml', 'w') as f:
     yaml.dump(CONFIG, f)
 
@@ -82,8 +82,11 @@ def main():
     vocab_size = 5000
 
     generator = get_trainable_model(vocab_size)
+
     target_params = cPickle.load(open('save/target_params.pkl'))
     target_lstm = TARGET_LSTM(vocab_size, 64, 32, 32, 20, 0, target_params)
+
+    saver = tf.train.Saver()
 
     config = tf.ConfigProto()
     # config.gpu_options.per_process_gpu_memory_fraction = 0.5
@@ -109,9 +112,9 @@ def main():
             print 'pre-train epoch ', epoch, 'test_loss ', test_loss
             losses[epoch / 5] = [epoch, test_loss]
 
-        # Every 50 epochs, save loss and weights to disk
-        if epoch % 50 == 0:
-            generator.save('save/mle-generator-' + TIME + '.pkl')
+        # Every 50 epochs, save loss and session to disk
+        if epoch % 100 == 0:
+            #saver.save(sess, 'save/mle-sess-'+TIME+'.ckpt')
             with open('save/mle-loss-' + TIME + '.pkl', 'w') as f:
                 cPickle.dump(losses, f, -1)
 
@@ -120,10 +123,12 @@ def main():
     test_loss = target_loss(sess, target_lstm, likelihood_data_loader)
     losses[CONFIG.PRE_EPOCH_NUM / 5] = [CONFIG.PRE_EPOCH_NUM, test_loss]
 
-    # Save final loss and weights to disk
-    generator.save('save/mle-generator-' + TIME + '.pkl')
+    # Save final loss and session to disk
+    saver.save(sess, 'save/mle-sess-'+TIME+'.ckpt')
     with open('save/mle-loss-' + TIME + '.pkl', 'w') as f:
         cPickle.dump(losses, f, -1)
+
+    sess.close()
 
 
 if __name__ == '__main__':
