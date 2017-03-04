@@ -13,6 +13,7 @@ TIME = time.strftime('%Y%m%d-%H%M%S')
 #  Generator  Hyper-parameters
 #########################################################################################
 CONFIG = GenConfig()
+CONFIG.PRE_EPOCH_NUM = 240
 with open('save/mle-config-'+TIME+'.yaml', 'w') as f:
     yaml.dump(CONFIG, f)
 
@@ -92,34 +93,36 @@ def main():
     generate_samples(sess, target_lstm, 64, 10000, positive_file)
     gen_data_loader.create_batches(positive_file)
 
-    log = open('log/experiment-log.txt', 'w')
-    saver = tf.train.Saver()
     #  pre-train generator
     print 'Start pre-training...'
-    log.write('pre-training...\n')
-    losses = np.zeros((CONFIG.PRE_EPOCH_NUM / 5, 2))
+    losses = np.zeros((CONFIG.PRE_EPOCH_NUM / 5 + 1, 2))
     for epoch in xrange(CONFIG.PRE_EPOCH_NUM):
         print 'pre-train epoch:', epoch
         loss = pre_train_epoch(sess, generator, gen_data_loader)
+
+        # Every 5 epochs, save current loss to np array
         if epoch % 5 == 0:
             generate_samples(sess, generator, CONFIG.BATCH_SIZE, generated_num, eval_file)
             likelihood_data_loader.create_batches(eval_file)
             test_loss = target_loss(sess, target_lstm, likelihood_data_loader)
             print 'pre-train epoch ', epoch, 'test_loss ', test_loss
-            buffer = str(epoch) + ' ' + str(test_loss) + '\n'
-            log.write(buffer)
-            losses[epoch/5] = [epoch, test_loss]
+            losses[epoch / 5] = [epoch, test_loss]
+
+        # Every 50 epochs, save loss and weights to disk
         if epoch % 50 == 0:
-            saver.save(sess, 'save/mle-weights-' + TIME)
+            with open('save/mle-weights-' + TIME + '.pkl', 'w') as f:
+                cPickle.dump(generator.g_params, f, -1)
             with open('save/mle-loss-' + TIME + '.pkl', 'w') as f:
                 cPickle.dump(losses, f, -1)
 
     generate_samples(sess, generator, CONFIG.BATCH_SIZE, generated_num, eval_file)
     likelihood_data_loader.create_batches(eval_file)
     test_loss = target_loss(sess, target_lstm, likelihood_data_loader)
-    buffer = 'After supervised-training:' + ' ' + str(test_loss) + '\n'
-    log.write(buffer)
-    log.close()
+    losses[CONFIG.PRE_EPOCH_NUM / 5] = [CONFIG.PRE_EPOCH_NUM, test_loss]
+
+    # Save final loss and weights to disk
+    with open('save/mle-weights-' + TIME + '.pkl', 'w') as f:
+        cPickle.dump(generator.g_params, f, -1)
     with open('save/mle-loss-' + TIME + '.pkl', 'w') as f:
         cPickle.dump(losses, f, -1)
 
