@@ -120,16 +120,21 @@ def main():
 
     assert GCONFIG.START_TOKEN == 0
 
+    ### LOAD DATA ###
     gen_data_loader = Gen_Data_loader(GCONFIG.BATCH_SIZE)
     likelihood_data_loader = Likelihood_data_loader(GCONFIG.BATCH_SIZE)
     vocab_size = 5000
     dis_data_loader = Dis_dataloader()
+    ######################
 
 
+
+    ### CREATE MODELS (VARIABLES) ###
     best_score = 1000
     generator = get_trainable_model(vocab_size)
     target_params = cPickle.load(open('save/target_params.pkl'))
     target_lstm = TARGET_LSTM(vocab_size, 64, 32, 32, 20, 0, target_params)
+    gen_params = [param for param in tf.trainable_variables() if 'generator' in param.name]
 
     with tf.variable_scope('discriminator'):
         cnn = TextCNN(
@@ -147,20 +152,26 @@ def main():
     dis_optimizer = tf.train.AdamOptimizer(1e-4)
     dis_grads_and_vars = dis_optimizer.compute_gradients(cnn.loss, cnn_params, aggregation_method=2)
     dis_train_op = dis_optimizer.apply_gradients(dis_grads_and_vars, global_step=dis_global_step)
+    #######################################
+    gensaver = tf.train.Saver(gen_params)
+    discsaver = tf.train.Saver(cnn_params)
+    ######################
 
-    ##### All variables have been created ##########
-    saver = tf.train.Saver()
-
+    ### START SESSION ###
     config = tf.ConfigProto()
     # config.gpu_options.per_process_gpu_memory_fraction = 0.5
     config.gpu_options.allow_growth = True
     sess = tf.Session(config=config)
     sess.run(tf.global_variables_initializer())
-    saver.restore(sess, 'save/mle-weights-20170303-023432.data-00000-of-00001')
+    gensaver.restore(sess, 'save/mle-weights-20170303-023432')
+    losses = cPickle.load(open('mle-loss-20170303-023432.pkl'))
+    num_pretrain_batches = len(losses)
+    losses = np.concatenate((losses, np.zeros((TOTAL_BATCH, 2))), axis=0)
 
     generate_samples(sess, target_lstm, 64, 10000, positive_file)
     gen_data_loader.create_batches(positive_file)
 
+    # # if no checkpoint file
     # log = open('log/experiment-log.txt', 'w')
     # #  pre-train generator
     # print 'Start pre-training...'
@@ -212,7 +223,6 @@ def main():
 
     print '#########################################################################'
     print 'Start Reinforcement Training Generator...'
-    log.write('Reinforcement Training...\n')
 
     for total_batch in range(TOTAL_BATCH):
         for it in range(GCONFIG.TRAIN_ITER):
@@ -225,9 +235,8 @@ def main():
             generate_samples(sess, generator, GCONFIG.BATCH_SIZE, generated_num, eval_file)
             likelihood_data_loader.create_batches(eval_file)
             test_loss = target_loss(sess, target_lstm, likelihood_data_loader)
-            buffer = str(total_batch) + ' ' + str(test_loss) + '\n'
             print 'total_batch: ', total_batch, 'test_loss: ', test_loss
-            log.write(buffer)
+            losses[total_batch + num_pretrain_batches] = [total_batch + num_pretrain_batches * 5, test_loss]
 
             if test_loss < best_score:
                 best_score = test_loss
@@ -256,7 +265,14 @@ def main():
                 except ValueError:
                     pass
 
-    log.close()
+        ### Save session and loss to disk ###
+        if total_batch % 5 == 0 or total_batch == TOTAL_BATCH - 1:
+            gensaver.save(sess, 'save/seqgan-gen-sess-' + TIME + '.ckpt')
+            discsaver.save(sess, 'save/seqgan-disc-sess-' + TIME + '.ckpt')
+            with open('save/seqgan-loss-' + TIME + '.pkl', 'w') as f:
+                cPickle.dump(losses, f, -1)
+
+    sess.close()
 
 
 if __name__ == '__main__':

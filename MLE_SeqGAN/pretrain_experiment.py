@@ -5,10 +5,9 @@ import random
 from gen_dataloader import Gen_Data_loader, Likelihood_data_loader
 from target_lstm import TARGET_LSTM
 import cPickle, yaml
-import time, sys
+import time
 from config import GenConfig
 TIME = time.strftime('%Y%m%d-%H%M%S')
-sys.setrecursionlimit(100000)
 
 #########################################################################################
 #  Generator  Hyper-parameters
