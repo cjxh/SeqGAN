@@ -1,5 +1,6 @@
 import tensorflow as tf
 from tensorflow.python.ops import tensor_array_ops, control_flow_ops
+import cPickle
 
 
 class LSTM(object):
@@ -215,3 +216,7 @@ class LSTM(object):
 
     def g_optimizer(self, *args, **kwargs):
         return tf.train.GradientDescentOptimizer(*args, **kwargs)
+
+    def save(self, filename):
+        with open(filename, 'w') as f:
+            cPickle.dump(self, f, -1)

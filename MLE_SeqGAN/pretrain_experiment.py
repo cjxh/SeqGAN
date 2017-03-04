@@ -110,8 +110,7 @@ def main():
 
         # Every 50 epochs, save loss and weights to disk
         if epoch % 50 == 0:
-            with open('save/mle-weights-' + TIME + '.pkl', 'w') as f:
-                cPickle.dump(generator.g_params, f, -1)
+            generator.save('save/mle-weights-' + TIME + '.pkl')
             with open('save/mle-loss-' + TIME + '.pkl', 'w') as f:
                 cPickle.dump(losses, f, -1)
 
@@ -121,8 +120,7 @@ def main():
     losses[CONFIG.PRE_EPOCH_NUM / 5] = [CONFIG.PRE_EPOCH_NUM, test_loss]
 
     # Save final loss and weights to disk
-    with open('save/mle-weights-' + TIME + '.pkl', 'w') as f:
-        cPickle.dump(generator.g_params, f, -1)
+    generator.save('save/mle-weights-' + TIME + '.pkl')
     with open('save/mle-loss-' + TIME + '.pkl', 'w') as f:
         cPickle.dump(losses, f, -1)
 
