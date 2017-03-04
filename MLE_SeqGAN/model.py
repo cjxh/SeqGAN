@@ -1,6 +1,6 @@
 import tensorflow as tf
 from tensorflow.python.ops import tensor_array_ops, control_flow_ops
-import cPickle
+import dill
 
 
 class LSTM(object):
@@ -219,4 +219,4 @@ class LSTM(object):
 
     def save(self, filename):
         with open(filename, 'w') as f:
-            cPickle.dump(self, f, -1)
+            dill.dump(self, f, -1)
