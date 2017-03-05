@@ -195,7 +195,7 @@ def main():
     # test_loss = target_loss(sess, target_lstm, likelihood_data_loader)
     # buffer = 'After pre-training:' + ' ' + str(test_loss) + '\n'
     # log.write(buffer)
-
+    '''
     generate_samples(sess, generator, GCONFIG.BATCH_SIZE, generated_num, eval_file)
     likelihood_data_loader.create_batches(eval_file)
     significance_test(sess, target_lstm, likelihood_data_loader, 'significance/supervise.txt')
@@ -223,12 +223,23 @@ def main():
                 pass
 
     discsaver.save(sess, 'save/disc-sess-'+TIME+'.ckpt')
+    '''
+    discsaver.restore(sess, 'save/disc-sess-'+TIME+'.ckpt')
     rollout = ROLLOUT(generator, 0.8)
+    
+    print '#########################################################################'
+    print 'Restoring old generator/discriminator training sessions...'
+
+    gensaver.restore(sess, 'save/seagan-gen-sess-'+TIME+'.ckpt')
+    discsaver.restore(sess, 'save/seagan-disc-sess-'+TIME+'.ckpt')
+    losses = cPickle.load(open('save/seagan-loss-20170303-023432.pkl'))
+    losses = np.concatenate((losses, np.zeros((TOTAL_BATCH, 2))), axis=0)
 
     print '#########################################################################'
     print 'Start Reinforcement Training Generator...'
 
     for total_batch in range(TOTAL_BATCH):
+        
         for it in range(GCONFIG.TRAIN_ITER):
             samples = generator.generate(sess)
             rewards = rollout.get_reward(sess, samples, 16, cnn)
