@@ -1,9 +1,12 @@
+import matplotlib as mpl
+mpl.use('Agg')
 import matplotlib.pyplot as plt  
 import cPickle 
 import numpy as np
   
 # Read the data into a pandas DataFrame.      
-data = cPickle.load(open('save/mle-loss-20170304-015334.pkl'))
+# data = cPickle.load(open('save/mle-loss-20170304-015334.pkl'))
+data = cPickle.load(open('save/seqgan-loss-20170305-085624.pkl'))
 
 # These are the "Tableau 20" colors as RGB.    
 tableau20 = [(31, 119, 180), (174, 199, 232), (255, 127, 14), (255, 187, 120),    
@@ -20,7 +23,7 @@ for i in range(len(tableau20)):
 # You typically want your plot to be ~1.33x wider than tall. This plot is a rare    
 # exception because of the number of lines being plotted on it.    
 # Common sizes: (10, 7.5) and (12, 9)    
-plt.figure(figsize=(12, 9))    
+plt.figure(figsize=(12, 9), frameon=False)    
   
 # Remove the plot frame lines. They are unnecessary chartjunk.    
 ax = plt.subplot(111)    
@@ -61,7 +64,8 @@ plt.tick_params(axis="both", which="both", bottom="off", top="off",
   
 # Now that the plot is prepared, it's time to actually plot the data!    
 # Note that I plotted the majors in order of the highest % in the final year.    
-methods = ['MLE']  
+# methods = ['MLE']  
+methods = ['SeqGAN']
 
 for rank, column in enumerate(methods):    
     # Plot each line separately with its own color, using the Tableau 20    
@@ -82,4 +86,5 @@ for rank, column in enumerate(methods):
 # You can also save it as a PDF, JPEG, etc.    
 # Just change the file extension in this call.    
 # bbox_inches="tight" removes all the extra whitespace on the edges of your plot.    
-plt.savefig("learning-rate.png", bbox_inches="tight")
+# plt.savefig("learning-rate.png", bbox_inches="tight")
+plt.savefig("learning-rate-seq-gan.png", bbox_inches="tight")
