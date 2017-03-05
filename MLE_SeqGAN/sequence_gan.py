@@ -26,18 +26,6 @@ TOTAL_BATCH = 50
 #########################################################################################
 #  Discriminator  Hyper-parameters
 #########################################################################################
-'''
-dis_embedding_dim = 64
-dis_filter_sizes = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 15, 20]
-dis_num_filters = [100, 200, 200, 200, 200, 100, 100, 100, 100, 100, 160, 160]
-dis_dropout_keep_prob = 0.75
-dis_l2_reg_lambda = 0.2
-
-# Training parameters
-dis_batch_size = 64
-dis_num_epochs = 3
-dis_alter_epoch = 50
-'''
 DCONFIG = DisConfig()
 #########################################################################################
 
@@ -174,28 +162,29 @@ def main():
     generate_samples(sess, target_lstm, 64, 10000, positive_file)
     gen_data_loader.create_batches(positive_file)
 
-    # # if no checkpoint file
-    # log = open('log/experiment-log.txt', 'w')
-    # #  pre-train generator
-    # print 'Start pre-training...'
-    # log.write('pre-training...\n')
-    # for epoch in xrange(GCONFIG.PRE_EPOCH_NUM):
-    #     print 'pre-train epoch:', epoch
-    #     loss = pre_train_epoch(sess, generator, gen_data_loader)
-    #     if epoch % 5 == 0:
-    #         generate_samples(sess, generator, GCONFIG.BATCH_SIZE, generated_num, eval_file)
-    #         likelihood_data_loader.create_batches(eval_file)
-    #         test_loss = target_loss(sess, target_lstm, likelihood_data_loader)
-    #         print 'pre-train epoch ', epoch, 'test_loss ', test_loss
-    #         buffer = str(epoch) + ' ' + str(test_loss) + '\n'
-    #         log.write(buffer)
-
-    # generate_samples(sess, generator, GCONFIG.BATCH_SIZE, generated_num, eval_file)
-    # likelihood_data_loader.create_batches(eval_file)
-    # test_loss = target_loss(sess, target_lstm, likelihood_data_loader)
-    # buffer = 'After pre-training:' + ' ' + str(test_loss) + '\n'
-    # log.write(buffer)
     '''
+    # if no checkpoint file
+    log = open('log/experiment-log.txt', 'w')
+    #  pre-train generator
+    print 'Start pre-training...'
+    log.write('pre-training...\n')
+    for epoch in xrange(GCONFIG.PRE_EPOCH_NUM):
+        print 'pre-train epoch:', epoch
+        loss = pre_train_epoch(sess, generator, gen_data_loader)
+        if epoch % 5 == 0:
+            generate_samples(sess, generator, GCONFIG.BATCH_SIZE, generated_num, eval_file)
+            likelihood_data_loader.create_batches(eval_file)
+            test_loss = target_loss(sess, target_lstm, likelihood_data_loader)
+            print 'pre-train epoch ', epoch, 'test_loss ', test_loss
+            buffer = str(epoch) + ' ' + str(test_loss) + '\n'
+            log.write(buffer)
+
+    generate_samples(sess, generator, GCONFIG.BATCH_SIZE, generated_num, eval_file)
+    likelihood_data_loader.create_batches(eval_file)
+    test_loss = target_loss(sess, target_lstm, likelihood_data_loader)
+    buffer = 'After pre-training:' + ' ' + str(test_loss) + '\n'
+    log.write(buffer)
+
     generate_samples(sess, generator, GCONFIG.BATCH_SIZE, generated_num, eval_file)
     likelihood_data_loader.create_batches(eval_file)
     significance_test(sess, target_lstm, likelihood_data_loader, 'significance/supervise.txt')
@@ -225,6 +214,7 @@ def main():
 
     discsaver.save(sess, 'save/disc-sess-'+TIME+'.ckpt')
     '''
+
     discsaver.restore(sess, 'save/disc-sess-20170305-085624')
     rollout = ROLLOUT(generator, 0.8)
     
