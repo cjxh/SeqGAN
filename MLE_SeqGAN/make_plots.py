@@ -5,8 +5,8 @@ import cPickle
 import numpy as np
   
 # Read the data into a pandas DataFrame.      
-# data = cPickle.load(open('save/mle-loss-20170304-015334.pkl'))
-data = cPickle.load(open('save/seqgan-loss-20170305-085624.pkl'))
+mle_data = cPickle.load(open('save/mle-loss-20170304-015334.pkl'))
+seqgan_data = cPickle.load(open('save/seqgan-loss-20170305-085624.pkl'))
 
 # These are the "Tableau 20" colors as RGB.    
 tableau20 = [(31, 119, 180), (174, 199, 232), (255, 127, 14), (255, 187, 120),    
@@ -36,8 +36,8 @@ ax.spines["left"].set_visible(False)
 # Ticks on the right and top of the plot are generally unnecessary chartjunk.    
 ax.get_xaxis().tick_bottom()    
 ax.get_yaxis().tick_left()  
-print data[0,0], data[-1,0]
-xmin, xmax, ymin, ymax = data[0, 0], data[-1, 0], 8.5, 10.5  
+print mle_data[0,0], mle_data[-1,0]
+xmin, xmax, ymin, ymax = min(mle_data[0, 0], seqgan_data[0,0]), max(mle_data[-1, 0], seqgan_data[-1,0]), 8.5, 10.5  
   
 # Limit the range of the plot to only where the data is.    
 # Avoid unnecessary whitespace.    
@@ -64,22 +64,35 @@ plt.tick_params(axis="both", which="both", bottom="off", top="off",
   
 # Now that the plot is prepared, it's time to actually plot the data!    
 # Note that I plotted the majors in order of the highest % in the final year.    
-# methods = ['MLE']  
-methods = ['SeqGAN']
+methods = ['MLE', 'SeqGAN']
 
-for rank, column in enumerate(methods):    
-    # Plot each line separately with its own color, using the Tableau 20    
-    # color set in order.    
-    plt.plot(data[:, 0], data[:,1],    
+for rank, column in enumerate(methods):
+    if rank == 0:    
+    	# Plot each line separately with its own color, using the Tableau 20    
+    	# color set in order.    
+    	plt.plot(mle_data[:, 0], mle_data[:,1],    
             lw=2.5, color=tableau20[rank])
   
-    # Add a text label to the right end of every line. Most of the code below    
-    # is adding specific offsets y position because some labels overlapped.    
-    y_pos = data[-1,1]    
+    	# Add a text label to the right end of every line. Most of the code below    
+    	# is adding specific offsets y position because some labels overlapped.    
+    	y_pos = mle_data[-1,1]    
   
-    # Again, make sure that all labels are large enough to be easily read    
-    # by the viewer.    
-    plt.text(xmax + 1.5, y_pos, column, fontsize=14, color=tableau20[rank])        
+    	# Again, make sure that all labels are large enough to be easily read    
+    	# by the viewer.    
+    	plt.text(xmax + 1.5, y_pos, column, fontsize=14, color=tableau20[rank])      
+    else:  
+    	# Plot each line separately with its own color, using the Tableau 20    
+    	# color set in order.    
+    	plt.plot(seqgan_data[:, 0], seqgan_data[:,1],    
+            lw=2.5, color=tableau20[rank])
+  
+    	# Add a text label to the right end of every line. Most of the code below    
+    	# is adding specific offsets y position because some labels overlapped.    
+    	y_pos = seqgan_data[-1,1]    
+  
+    	# Again, make sure that all labels are large enough to be easily read    
+    	# by the viewer.    
+    	plt.text(xmax + 1.5, y_pos, column, fontsize=14, color=tableau20[rank])      
     
   
 # Finally, save the figure as a PNG.    
@@ -87,4 +100,4 @@ for rank, column in enumerate(methods):
 # Just change the file extension in this call.    
 # bbox_inches="tight" removes all the extra whitespace on the edges of your plot.    
 # plt.savefig("learning-rate.png", bbox_inches="tight")
-plt.savefig("learning-rate-seq-gan.png", bbox_inches="tight")
+plt.savefig("learning-rate-combined.png", bbox_inches="tight")
