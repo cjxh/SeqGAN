@@ -10,7 +10,7 @@ from rollout import ROLLOUT
 from target_lstm import TARGET_LSTM
 import cPickle, yaml, dill
 import time
-from config import GenConfig
+from config import GenConfig, DisConfig
 TIME = time.strftime('%Y%m%d-%H%M%S')
 
 #########################################################################################
@@ -26,6 +26,7 @@ TOTAL_BATCH = 50
 #########################################################################################
 #  Discriminator  Hyper-parameters
 #########################################################################################
+'''
 dis_embedding_dim = 64
 dis_filter_sizes = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 15, 20]
 dis_num_filters = [100, 200, 200, 200, 200, 100, 100, 100, 100, 100, 160, 160]
@@ -36,6 +37,8 @@ dis_l2_reg_lambda = 0.2
 dis_batch_size = 64
 dis_num_epochs = 3
 dis_alter_epoch = 50
+'''
+DCONFIG = DisConfig()
 #########################################################################################
 
 with open('save/seqgan-config-'+TIME+'.yaml', 'w') as f:
@@ -141,10 +144,10 @@ def main():
             sequence_length=20,
             num_classes=2,
             vocab_size=vocab_size,
-            embedding_size=dis_embedding_dim,
-            filter_sizes=dis_filter_sizes,
-            num_filters=dis_num_filters,
-            l2_reg_lambda=dis_l2_reg_lambda)
+            embedding_size=DCONFIG.DIS_EMBEDDING_DIM,
+            filter_sizes=DCONFIG.DIS_FILTER_SIZES,
+            num_filters=DCONFIG.DIS_NUM_FILTERS,
+            l2_reg_lambda=DCONFIG.DIS_12_REG_LAMBDA)
 
     cnn_params = [param for param in tf.trainable_variables() if 'discriminator' in param.name]
     # Define Discriminator Training procedure
@@ -198,13 +201,13 @@ def main():
     significance_test(sess, target_lstm, likelihood_data_loader, 'significance/supervise.txt')
 
     print 'Start training discriminator...'
-    for _ in range(dis_alter_epoch):
+    for _ in range(DCONFIG.DIS_ALTER_EPOCH):
         generate_samples(sess, generator, GCONFIG.BATCH_SIZE, generated_num, negative_file)
 
         #  train discriminator
         dis_x_train, dis_y_train = dis_data_loader.load_train_data(positive_file, negative_file)
         dis_batches = dis_data_loader.batch_iter(
-            zip(dis_x_train, dis_y_train), dis_batch_size, dis_num_epochs
+            zip(dis_x_train, dis_y_train), DCONFIG.DIS_BATCH_SIZE, DCONFIG.DIS_NUM_EPOCHS
         )
 
         for batch in dis_batches:
@@ -213,7 +216,7 @@ def main():
                 feed = {
                     cnn.input_x: x_batch,
                     cnn.input_y: y_batch,
-                    cnn.dropout_keep_prob: dis_dropout_keep_prob
+                    cnn.dropout_keep_prob: DCONFIG.DIS_DROPOUT_KEEP_PROB
                 }
                 _, step = sess.run([dis_train_op, dis_global_step], feed)
             except ValueError:
@@ -251,7 +254,7 @@ def main():
             generate_samples(sess, generator, GCONFIG.BATCH_SIZE, generated_num, negative_file)
 
             dis_x_train, dis_y_train = dis_data_loader.load_train_data(positive_file, negative_file)
-            dis_batches = dis_data_loader.batch_iter(zip(dis_x_train, dis_y_train), dis_batch_size, 3)
+            dis_batches = dis_data_loader.batch_iter(zip(dis_x_train, dis_y_train), DCONFIG.DIS_BATCH_SIZE, 3)
 
             for batch in dis_batches:
                 try:
@@ -259,7 +262,7 @@ def main():
                     feed = {
                         cnn.input_x: x_batch,
                         cnn.input_y: y_batch,
-                        cnn.dropout_keep_prob: dis_dropout_keep_prob
+                        cnn.dropout_keep_prob: DCONFIG.DIS_DROPOUT_KEEP_PROB
                     }
                     _, step = sess.run([dis_train_op, dis_global_step], feed)
                 except ValueError:
