@@ -225,15 +225,15 @@ def main():
 
     discsaver.save(sess, 'save/disc-sess-'+TIME+'.ckpt')
     '''
-    discsaver.restore(sess, 'save/disc-sess-'+TIME+'.ckpt')
+    discsaver.restore(sess, 'save/disc-sess-20170305-085624')
     rollout = ROLLOUT(generator, 0.8)
     
     print '#########################################################################'
     print 'Restoring old generator/discriminator training sessions...'
 
-    gensaver.restore(sess, 'save/seagan-gen-sess-'+TIME+'.ckpt')
-    discsaver.restore(sess, 'save/seagan-disc-sess-'+TIME+'.ckpt')
-    losses = cPickle.load(open('save/seagan-loss-20170303-023432.pkl'))
+    gensaver.restore(sess, 'save/seagan-gen-sess-20170305-085624')
+    discsaver.restore(sess, 'save/seagan-disc-sess-20170305-085624')
+    losses = cPickle.load(open('save/seagan-loss-20170305-085624.pkl'))
     losses = np.concatenate((losses, np.zeros((TOTAL_BATCH, 2))), axis=0)
 
     print '#########################################################################'
