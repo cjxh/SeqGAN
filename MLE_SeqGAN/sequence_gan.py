@@ -167,7 +167,7 @@ def main():
     sess = tf.Session(config=config)
     sess.run(tf.global_variables_initializer())
     gensaver.restore(sess, 'save/mle-weights-20170303-023432')
-    losses = cPickle.load(open('mle-loss-20170303-023432.pkl'))
+    losses = cPickle.load(open('save/mle-loss-20170303-023432.pkl'))
     num_pretrain_batches = len(losses)
     losses = np.concatenate((losses, np.zeros((TOTAL_BATCH, 2))), axis=0)
 
@@ -201,7 +201,8 @@ def main():
     significance_test(sess, target_lstm, likelihood_data_loader, 'significance/supervise.txt')
 
     print 'Start training discriminator...'
-    for _ in range(DCONFIG.DIS_ALTER_EPOCH):
+    for i in range(DCONFIG.DIS_ALTER_EPOCH):
+	print "Starting epoch " + str(i)
         generate_samples(sess, generator, GCONFIG.BATCH_SIZE, generated_num, negative_file)
 
         #  train discriminator
