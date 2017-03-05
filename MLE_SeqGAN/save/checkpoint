@@ -1,2 +1,3 @@
-model_checkpoint_path: "mle-sess-20170304-035414.ckpt"
-all_model_checkpoint_paths: "mle-sess-20170304-035414.ckpt"
+model_checkpoint_path: "seqgan-disc-sess-20170305-085624.ckpt"
+all_model_checkpoint_paths: "disc-sess-20170305-085624.ckpt"
+all_model_checkpoint_paths: "seqgan-disc-sess-20170305-085624.ckpt"
