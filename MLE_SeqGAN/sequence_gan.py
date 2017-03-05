@@ -222,6 +222,7 @@ def main():
             except ValueError:
                 pass
 
+    discsaver.save(sess, 'save/disc-sess-'+TIME+'.ckpt')
     rollout = ROLLOUT(generator, 0.8)
 
     print '#########################################################################'
