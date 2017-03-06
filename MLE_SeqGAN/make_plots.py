@@ -87,8 +87,9 @@ for rank, column in enumerate(methods):
     	# color set in order.    
     	plt.plot(seqgan_data[:, 0], seqgan_data[:,1],    
             lw=2.5, color=tableau20[rank])
-    	plt.plot(new_seqgan_data[:, 0], new_seqgan_data[:,1],    
+    	plt.plot(350+new_seqgan_data[:, 0], new_seqgan_data[:,1],    
             lw=2.5, color=tableau20[rank])
+	print new_seqgan_data[:, 0]
   
     	# Add a text label to the right end of every line. Most of the code below    
     	# is adding specific offsets y position because some labels overlapped.    
