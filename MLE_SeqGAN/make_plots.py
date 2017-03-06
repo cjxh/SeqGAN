@@ -6,7 +6,8 @@ import numpy as np
   
 # Read the data into a pandas DataFrame.      
 mle_data = cPickle.load(open('save/mle-loss-20170304-015334.pkl'))
-seqgan_data = cPickle.load(open('save/seqgan-loss-20170305-232119.pkl'))
+seqgan_data = cPickle.load(open('save/seqgan-loss-20170305-085624.pkl'))
+# seqgan_data += cPickle.load(open('save/seqgan-retrained.pkl')
 
 # These are the "Tableau 20" colors as RGB.    
 tableau20 = [(31, 119, 180), (174, 199, 232), (255, 127, 14), (255, 187, 120),    
@@ -101,4 +102,4 @@ for rank, column in enumerate(methods):
 # Just change the file extension in this call.    
 # bbox_inches="tight" removes all the extra whitespace on the edges of your plot.    
 # plt.savefig("learning-rate.png", bbox_inches="tight")
-plt.savefig("learning-rate-combined-new.png", bbox_inches="tight")
+plt.savefig("learning-rate-combined.png", bbox_inches="tight")
