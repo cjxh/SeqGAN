@@ -92,8 +92,8 @@ for rank, column in enumerate(methods):
   
     	# Add a text label to the right end of every line. Most of the code below    
     	# is adding specific offsets y position because some labels overlapped.    
-    	y_pos = seqgan_data[-1,1]    
-    	y_pos = new_seqgan_data[-1,1]    
+    	#y_pos = seqgan_data[-1,1]    
+    	y_pos = seqgan_data[-1,1] + new_seqgan_data[-1,1]    
   
     	# Again, make sure that all labels are large enough to be easily read    
     	# by the viewer.    
