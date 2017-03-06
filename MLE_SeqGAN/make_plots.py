@@ -9,6 +9,12 @@ mle_data = cPickle.load(open('save/mle-loss-20170304-015334.pkl'))
 new_seqgan_data = cPickle.load(open('save/seqgan-retrained.pkl'))
 seqgan_data = cPickle.load(open('save/seqgan-loss-20170305-085624.pkl'))
 
+# hacky way to reconstruct full seqgan data
+new_seqgan_data = new_seqgan_data[70:120]
+for i in range(len(new_seqgan_data)): new_seqgan_data[i,0] += 50
+seqgan_data = np.concatenate((seqgan_data, new_seqgan_data), axis=0)
+mle_data = seqgan_data[:71]
+
 # These are the "Tableau 20" colors as RGB.    
 tableau20 = [(31, 119, 180), (174, 199, 232), (255, 127, 14), (255, 187, 120),    
              (44, 160, 44), (152, 223, 138), (214, 39, 40), (255, 152, 150),    
@@ -39,12 +45,12 @@ ax.get_xaxis().tick_bottom()
 ax.get_yaxis().tick_left()  
 print mle_data[0,0], mle_data[-1,0]
 print seqgan_data[0,0], (seqgan_data[-1, 0] + new_seqgan_data[-1,0])
-xmin, xmax, ymin, ymax = min(mle_data[0, 0], seqgan_data[0,0]), max(mle_data[-1,0],seqgan_data[-1,0] + new_seqgan_data[-1,0]), 8.5, 10.5  
+xmin, xmax, ymin, ymax = min(mle_data[0, 0], seqgan_data[0,0]), max(mle_data[-1,0], seqgan_data[-1,0]), 8.5, 10.5  
   
 # Limit the range of the plot to only where the data is.    
 # Avoid unnecessary whitespace.    
 plt.ylim(ymin, ymax)    
-plt.xlim(xmin, xmax)    
+plt.xlim(xmin, xmax+1)    
   
 # Make sure your axis ticks are large enough to be easily read.    
 # You don't want your viewers squinting to read your plot.    
@@ -70,35 +76,35 @@ methods = ['MLE', 'SeqGAN']
 
 for rank, column in enumerate(methods):
     if rank == 0:    
-    	# Plot each line separately with its own color, using the Tableau 20    
-    	# color set in order.    
-    	plt.plot(mle_data[:, 0], mle_data[:,1],    
-            lw=2.5, color=tableau20[rank])
+    # 	# Plot each line separately with its own color, using the Tableau 20    
+    # 	# color set in order.    
+    # 	plt.plot(mle_data[:, 0], mle_data[:,1],    
+    #         lw=2.5, color=tableau20[rank])
   
-    	# Add a text label to the right end of every line. Most of the code below    
-    	# is adding specific offsets y position because some labels overlapped.    
-    	y_pos = mle_data[-1,1]    
+    # 	# Add a text label to the right end of every line. Most of the code below    
+    # 	# is adding specific offsets y position because some labels overlapped.    
+    # 	y_pos = mle_data[-1,1]    
   
-    	# Again, make sure that all labels are large enough to be easily read    
-    	# by the viewer.    
-    	plt.text(xmax + 1.5, y_pos, column, fontsize=14, color=tableau20[rank])      
+    # 	# Again, make sure that all labels are large enough to be easily read    
+    # 	# by the viewer.    
+    # 	plt.text(xmax + 1.5, y_pos, column, fontsize=14, color=tableau20[rank])   
+        pass   
     else:  
     	# Plot each line separately with its own color, using the Tableau 20    
     	# color set in order.    
-    	plt.plot(seqgan_data[:, 0], seqgan_data[:,1],    
+        plt.plot(seqgan_data[:, 0], seqgan_data[:,1], \
             lw=2.5, color=tableau20[rank])
-    	plt.plot(350+new_seqgan_data[:, 0], new_seqgan_data[:,1],    
-            lw=2.5, color=tableau20[rank])
-	print new_seqgan_data[:, 0]
-  
+
     	# Add a text label to the right end of every line. Most of the code below    
     	# is adding specific offsets y position because some labels overlapped.    
     	#y_pos = seqgan_data[-1,1]    
-    	y_pos = seqgan_data[-1,1] + new_seqgan_data[-1,1]    
-  
+        y_pos = seqgan_data[-1,1]
+
     	# Again, make sure that all labels are large enough to be easily read    
     	# by the viewer.    
-    	plt.text(xmax + 1.5, y_pos, column, fontsize=14, color=tableau20[rank])      
+        plt.text(xmax + 1.5, y_pos, column, fontsize=14, color=tableau20[rank]) 
+
+        plt.plot((350, 350), (ymin, 9.5), '--')     
     
   
 # Finally, save the figure as a PNG.    
