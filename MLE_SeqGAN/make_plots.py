@@ -6,8 +6,8 @@ import numpy as np
   
 # Read the data into a pandas DataFrame.      
 mle_data = cPickle.load(open('save/mle-loss-20170304-015334.pkl'))
+new_seqgan_data = cPickle.load(open('save/seqgan-retrained.pkl'))
 seqgan_data = cPickle.load(open('save/seqgan-loss-20170305-085624.pkl'))
-# seqgan_data += cPickle.load(open('save/seqgan-retrained.pkl')
 
 # These are the "Tableau 20" colors as RGB.    
 tableau20 = [(31, 119, 180), (174, 199, 232), (255, 127, 14), (255, 187, 120),    
@@ -38,8 +38,8 @@ ax.spines["left"].set_visible(False)
 ax.get_xaxis().tick_bottom()    
 ax.get_yaxis().tick_left()  
 print mle_data[0,0], mle_data[-1,0]
-print seqgan_data[0,0], seqgan_data[-1, 0]
-xmin, xmax, ymin, ymax = min(mle_data[0, 0], seqgan_data[0,0]), max(mle_data[-1,0],seqgan_data[-1,0]), 8.5, 10.5  
+print seqgan_data[0,0], (seqgan_data[-1, 0] + new_seqgan_data[-1,0])
+xmin, xmax, ymin, ymax = min(mle_data[0, 0], seqgan_data[0,0]), max(mle_data[-1,0],seqgan_data[-1,0] + new_seqgan_data[-1,0]), 8.5, 10.5  
   
 # Limit the range of the plot to only where the data is.    
 # Avoid unnecessary whitespace.    
@@ -87,10 +87,13 @@ for rank, column in enumerate(methods):
     	# color set in order.    
     	plt.plot(seqgan_data[:, 0], seqgan_data[:,1],    
             lw=2.5, color=tableau20[rank])
+    	plt.plot(new_seqgan_data[:, 0], new_seqgan_data[:,1],    
+            lw=2.5, color=tableau20[rank])
   
     	# Add a text label to the right end of every line. Most of the code below    
     	# is adding specific offsets y position because some labels overlapped.    
     	y_pos = seqgan_data[-1,1]    
+    	y_pos = new_seqgan_data[-1,1]    
   
     	# Again, make sure that all labels are large enough to be easily read    
     	# by the viewer.    
