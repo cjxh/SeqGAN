@@ -214,10 +214,10 @@ def main():
     print '#########################################################################'
     print 'Restoring old generator/discriminator training sessions...'
 
-    gensaver.restore(sess, './save/seqgan-gen-sess-20170305-085624.ckpt')
-    discsaver.restore(sess, './save/seqgan-disc-sess-20170305-085624.ckpt')
-    losses = cPickle.load(open('./save/seqgan-loss-20170305-085624.pkl'))
-    num_prev_batches = len(losses)
+    gensaver.restore(sess, './save/20170305-085624-seqgan/seqgan-gen-sess-20170305-085624.ckpt')
+    discsaver.restore(sess, './save/20170305-085624-seqgan/seqgan-disc-sess-20170305-085624.ckpt')
+    losses = cPickle.load(open('./save/20170305-085624-seqgan/seqgan-loss-20170305-085624.pkl'))
+    num_prev_points, last_batch_num = len(losses), losses[-1, 0]
     losses = np.concatenate((losses, np.zeros((TOTAL_BATCH, 2))), axis=0)
 
     rollout = ROLLOUT(generator, 0.8)
@@ -245,7 +245,7 @@ def main():
             likelihood_data_loader.create_batches(eval_file)
             test_loss = target_loss(sess, target_lstm, likelihood_data_loader)
             print 'total_batch: ', total_batch, 'test_loss: ', test_loss
-            losses[num_prev_batches + total_batch] = [losses[num_prev_batches - 1, 0] + total_batches, test_loss]
+            losses[num_prev_points + total_batch] = [last_batch_num + total_batch, test_loss]
 
             if test_loss < best_score:
                 best_score = test_loss

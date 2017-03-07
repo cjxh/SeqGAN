@@ -5,14 +5,8 @@ import cPickle
 import numpy as np
   
 # Read the data into a pandas DataFrame.      
-mle_data = cPickle.load(open('save/mle-loss-20170304-015334.pkl'))
-new_seqgan_data = cPickle.load(open('save/seqgan-retrained.pkl'))
-seqgan_data = cPickle.load(open('save/seqgan-loss-20170305-085624.pkl'))
-
-# hacky way to reconstruct full seqgan data
-new_seqgan_data = new_seqgan_data[70:120]
-for i in range(len(new_seqgan_data)): new_seqgan_data[i,0] += 50
-seqgan_data = np.concatenate((seqgan_data, new_seqgan_data), axis=0)
+#mle_data = cPickle.load(open('save/mle-loss-20170304-015334.pkl'))
+seqgan_data = cPickle.load(open('./save/20170305-232733-seqgan/seqgan-loss-20170305-232733.pkl'))
 mle_data = seqgan_data[:71]
 
 # These are the "Tableau 20" colors as RGB.    
@@ -43,8 +37,6 @@ ax.spines["left"].set_visible(False)
 # Ticks on the right and top of the plot are generally unnecessary chartjunk.    
 ax.get_xaxis().tick_bottom()    
 ax.get_yaxis().tick_left()  
-print mle_data[0,0], mle_data[-1,0]
-print seqgan_data[0,0], (seqgan_data[-1, 0] + new_seqgan_data[-1,0])
 xmin, xmax, ymin, ymax = min(mle_data[0, 0], seqgan_data[0,0]), max(mle_data[-1,0], seqgan_data[-1,0]), 8.5, 10.5  
   
 # Limit the range of the plot to only where the data is.    
