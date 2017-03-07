@@ -173,6 +173,7 @@ def main():
 
     generate_samples(sess, target_lstm, 64, 10000, positive_file)
     gen_data_loader.create_batches(positive_file)
+    print gensaver.save(sess, 'save/saved'+TIME)
 
     # # if no checkpoint file
     # log = open('log/experiment-log.txt', 'w')
