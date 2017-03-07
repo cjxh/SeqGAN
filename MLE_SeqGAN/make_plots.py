@@ -112,4 +112,4 @@ for rank, column in enumerate(methods):
 # Just change the file extension in this call.    
 # bbox_inches="tight" removes all the extra whitespace on the edges of your plot.    
 # plt.savefig("learning-rate.png", bbox_inches="tight")
-plt.savefig("learning-rate-combined.png", bbox_inches="tight")
+plt.savefig("plots/learning-rate-combined.png", bbox_inches="tight")

@@ -8,8 +8,8 @@ from dis_dataloader import Dis_dataloader
 from text_classifier import TextCNN
 from rollout import ROLLOUT
 from target_lstm import TARGET_LSTM
-import cPickle, yaml, dill
-import time
+import cPickle, yaml
+import time, os
 from config import GenConfig, DisConfig
 TIME = time.strftime('%Y%m%d-%H%M%S')
 
@@ -28,9 +28,6 @@ TOTAL_BATCH = 50
 #########################################################################################
 DCONFIG = DisConfig()
 #########################################################################################
-
-with open('save/seqgan-config-'+TIME+'.yaml', 'w') as f:
-    yaml.dump(GCONFIG, f)
 
 positive_file = 'save/real_data.txt'
 negative_file = 'target_generate/generator_sample.txt'
@@ -116,7 +113,7 @@ def main():
     likelihood_data_loader = Likelihood_data_loader(GCONFIG.BATCH_SIZE)
     vocab_size = 5000
     dis_data_loader = Dis_dataloader()
-    ######################
+    #################
 
 
 
@@ -148,16 +145,15 @@ def main():
     discsaver = tf.train.Saver(cnn_params)
     ######################
 
+
+
     ### START SESSION ###
     config = tf.ConfigProto()
     # config.gpu_options.per_process_gpu_memory_fraction = 0.5
     config.gpu_options.allow_growth = True
     sess = tf.Session(config=config)
     sess.run(tf.global_variables_initializer())
-    gensaver.restore(sess, 'save/mle-weights-20170303-023432')
-    losses = cPickle.load(open('save/mle-loss-20170303-023432.pkl'))
-    num_pretrain_batches = len(losses)
-    losses = np.concatenate((losses, np.zeros((TOTAL_BATCH, 2))), axis=0)
+
 
     generate_samples(sess, target_lstm, 64, 10000, positive_file)
     gen_data_loader.create_batches(positive_file)
@@ -215,19 +211,26 @@ def main():
     discsaver.save(sess, 'save/disc-sess-'+TIME+'.ckpt')
     '''
 
-    discsaver.restore(sess, 'save/disc-sess-20170305-085624.ckpt')
-    rollout = ROLLOUT(generator, 0.8)
-    
     print '#########################################################################'
     print 'Restoring old generator/discriminator training sessions...'
 
     gensaver.restore(sess, './save/seqgan-gen-sess-20170305-085624.ckpt')
     discsaver.restore(sess, './save/seqgan-disc-sess-20170305-085624.ckpt')
     losses = cPickle.load(open('./save/seqgan-loss-20170305-085624.pkl'))
+    num_prev_batches = len(losses)
     losses = np.concatenate((losses, np.zeros((TOTAL_BATCH, 2))), axis=0)
+
+    rollout = ROLLOUT(generator, 0.8)
 
     print '#########################################################################'
     print 'Start Reinforcement Training Generator...'
+
+    if not os.path.exists(TIME+'-seqgan'):
+        os.makedirs(TIME+'-seqgan')
+    with open('./save/'+TIME+'-seqgan/seqgan-config-'+TIME+'.yaml', 'w') as f:
+        yaml.dump(GCONFIG, f)
+        yaml.dump(DCONFIG, f)
+        yaml.dump(TOTAL_BATCH, f)
 
     for total_batch in range(TOTAL_BATCH):
         
@@ -242,7 +245,7 @@ def main():
             likelihood_data_loader.create_batches(eval_file)
             test_loss = target_loss(sess, target_lstm, likelihood_data_loader)
             print 'total_batch: ', total_batch, 'test_loss: ', test_loss
-            losses[total_batch + num_pretrain_batches] = [total_batch + num_pretrain_batches * 5, test_loss]
+            losses[num_prev_batches + total_batch] = [losses[num_prev_batches - 1, 0] + total_batches, test_loss]
 
             if test_loss < best_score:
                 best_score = test_loss
@@ -273,10 +276,10 @@ def main():
 
         ### Save session and loss to disk ###
         if total_batch % 5 == 0 or total_batch == TOTAL_BATCH - 1:
-            gensaver.save(sess, 'save/seqgan-gen-sess-' + TIME + '.ckpt')
-            discsaver.save(sess, 'save/seqgan-disc-sess-' + TIME + '.ckpt')
+            gensaver.save(sess, 'save/'+TIME+'-seqgan/seqgan-gen-sess-' + TIME + '.ckpt')
+            discsaver.save(sess, 'save/'+TIME+'-seqgan/seqgan-disc-sess-' + TIME + '.ckpt')
             #with open('save/seqgan-loss-' + TIME + '.pkl', 'w') as f:
-    	    with open('save/seqgan-loss-20170305-085624.pkl', 'w') as f:
+    	    with open('./save/'+TIME+'-seqgan/seqgan-loss-' + TIME + '.pkl', 'w') as f:
                 cPickle.dump(losses, f, -1)
 
     sess.close()

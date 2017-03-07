@@ -5,7 +5,7 @@ import random
 from gen_dataloader import Gen_Data_loader, Likelihood_data_loader
 from target_lstm import TARGET_LSTM
 import cPickle, yaml
-import time
+import time, os
 from config import GenConfig
 TIME = time.strftime('%Y%m%d-%H%M%S')
 
@@ -14,8 +14,6 @@ TIME = time.strftime('%Y%m%d-%H%M%S')
 #########################################################################################
 CONFIG = GenConfig()
 CONFIG.PRE_EPOCH_NUM = 50
-with open('save/mle-config-'+TIME+'.yaml', 'w') as f:
-    yaml.dump(CONFIG, f)
 
 ##########################################################################################
 positive_file = 'save/real_data.txt'
@@ -98,7 +96,13 @@ def main():
 
     #  pre-train generator
     print 'Start pre-training...'
+    
     losses = np.zeros((CONFIG.PRE_EPOCH_NUM / 5 + 1, 2))
+    if not os.path.exists(TIME+'-gen'):
+        os.makedirs(TIME+'-gen')
+    with open('./save/'+TIME+'-gen/gen-config-'+TIME+'.yaml', 'w') as f:
+        yaml.dump(CONFIG, f)
+
     for epoch in xrange(CONFIG.PRE_EPOCH_NUM):
         print 'pre-train epoch:', epoch
         loss = pre_train_epoch(sess, generator, gen_data_loader)
@@ -113,8 +117,8 @@ def main():
 
         # Every 50 epochs, save loss and session to disk
         if epoch % 100 == 0:
-            #saver.save(sess, 'save/mle-sess-'+TIME+'.ckpt')
-            with open('save/mle-loss-' + TIME + '.pkl', 'w') as f:
+            saver.save(sess, './save/'+TIME+'-gen/gen-sess-'+TIME+'.ckpt')
+            with open('./save/'+TIME+'-gen/gen-loss-' + TIME + '.pkl', 'w') as f:
                 cPickle.dump(losses, f, -1)
 
     generate_samples(sess, generator, CONFIG.BATCH_SIZE, generated_num, eval_file)
@@ -123,8 +127,8 @@ def main():
     losses[CONFIG.PRE_EPOCH_NUM / 5] = [CONFIG.PRE_EPOCH_NUM, test_loss]
 
     # Save final loss and session to disk
-    saver.save(sess, 'save/mle-sess-'+TIME+'.ckpt')
-    with open('save/mle-loss-' + TIME + '.pkl', 'w') as f:
+    saver.save(sess, './save/'+TIME+'-gen/gen-sess-'+TIME+'.ckpt')
+    with open('./save/'+TIME+'-gen/gen-loss-' + TIME + '.pkl', 'w') as f:
         cPickle.dump(losses, f, -1)
 
     sess.close()
