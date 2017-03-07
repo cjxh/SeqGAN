@@ -17,8 +17,6 @@ TIME = time.strftime('%Y%m%d-%H%M%S')
 #  Generator  Hyper-parameters
 #########################################################################################
 GCONFIG = GenConfig()
-GCONFIG.PRE_EPOCH_NUM = 240
-
 ##########################################################################################
 
 TOTAL_BATCH = 50
@@ -214,9 +212,9 @@ def main():
     print '#########################################################################'
     print 'Restoring old generator/discriminator training sessions...'
 
-    gensaver.restore(sess, './save/20170305-085624-seqgan/seqgan-gen-sess-20170305-085624.ckpt')
-    discsaver.restore(sess, './save/20170305-085624-seqgan/seqgan-disc-sess-20170305-085624.ckpt')
-    losses = cPickle.load(open('./save/20170305-085624-seqgan/seqgan-loss-20170305-085624.pkl'))
+    gensaver.restore(sess, './save/20170305-232733-seqgan/seqgan-gen-sess-20170305-232733.ckpt')
+    discsaver.restore(sess, './save/20170305-232733-seqgan/seqgan-disc-sess-20170305-232733.ckpt')
+    losses = cPickle.load(open('./save/20170305-232733-seqgan/seqgan-loss-20170305-232733.pkl'))
     num_prev_points, last_batch_num = len(losses), losses[-1, 0]
     losses = np.concatenate((losses, np.zeros((TOTAL_BATCH, 2))), axis=0)
 
