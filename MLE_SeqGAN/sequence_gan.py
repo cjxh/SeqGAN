@@ -19,7 +19,7 @@ TIME = time.strftime('%Y%m%d-%H%M%S')
 GCONFIG = GenConfig()
 ##########################################################################################
 
-TOTAL_BATCH = 50
+TOTAL_BATCH = 10
 
 #########################################################################################
 #  Discriminator  Hyper-parameters
@@ -223,8 +223,8 @@ def main():
     print '#########################################################################'
     print 'Start Reinforcement Training Generator...'
 
-    if not os.path.exists(TIME+'-seqgan'):
-        os.makedirs(TIME+'-seqgan')
+    if not os.path.exists('./save/'+TIME+'-seqgan'):
+        os.makedirs('./save/'+TIME+'-seqgan')
     with open('./save/'+TIME+'-seqgan/seqgan-config-'+TIME+'.yaml', 'w') as f:
         yaml.dump(GCONFIG, f)
         yaml.dump(DCONFIG, f)
