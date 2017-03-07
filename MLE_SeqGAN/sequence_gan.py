@@ -26,18 +26,6 @@ TOTAL_BATCH = 50
 #########################################################################################
 #  Discriminator  Hyper-parameters
 #########################################################################################
-'''
-dis_embedding_dim = 64
-dis_filter_sizes = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 15, 20]
-dis_num_filters = [100, 200, 200, 200, 200, 100, 100, 100, 100, 100, 160, 160]
-dis_dropout_keep_prob = 0.75
-dis_l2_reg_lambda = 0.2
-
-# Training parameters
-dis_batch_size = 64
-dis_num_epochs = 3
-dis_alter_epoch = 50
-'''
 DCONFIG = DisConfig()
 #########################################################################################
 
@@ -173,30 +161,30 @@ def main():
 
     generate_samples(sess, target_lstm, 64, 10000, positive_file)
     gen_data_loader.create_batches(positive_file)
-    print gensaver.save(sess, 'save/saved'+TIME)
 
-    # # if no checkpoint file
-    # log = open('log/experiment-log.txt', 'w')
-    # #  pre-train generator
-    # print 'Start pre-training...'
-    # log.write('pre-training...\n')
-    # for epoch in xrange(GCONFIG.PRE_EPOCH_NUM):
-    #     print 'pre-train epoch:', epoch
-    #     loss = pre_train_epoch(sess, generator, gen_data_loader)
-    #     if epoch % 5 == 0:
-    #         generate_samples(sess, generator, GCONFIG.BATCH_SIZE, generated_num, eval_file)
-    #         likelihood_data_loader.create_batches(eval_file)
-    #         test_loss = target_loss(sess, target_lstm, likelihood_data_loader)
-    #         print 'pre-train epoch ', epoch, 'test_loss ', test_loss
-    #         buffer = str(epoch) + ' ' + str(test_loss) + '\n'
-    #         log.write(buffer)
-
-    # generate_samples(sess, generator, GCONFIG.BATCH_SIZE, generated_num, eval_file)
-    # likelihood_data_loader.create_batches(eval_file)
-    # test_loss = target_loss(sess, target_lstm, likelihood_data_loader)
-    # buffer = 'After pre-training:' + ' ' + str(test_loss) + '\n'
-    # log.write(buffer)
     '''
+    # if no checkpoint file
+    log = open('log/experiment-log.txt', 'w')
+    #  pre-train generator
+    print 'Start pre-training...'
+    log.write('pre-training...\n')
+    for epoch in xrange(GCONFIG.PRE_EPOCH_NUM):
+        print 'pre-train epoch:', epoch
+        loss = pre_train_epoch(sess, generator, gen_data_loader)
+        if epoch % 5 == 0:
+            generate_samples(sess, generator, GCONFIG.BATCH_SIZE, generated_num, eval_file)
+            likelihood_data_loader.create_batches(eval_file)
+            test_loss = target_loss(sess, target_lstm, likelihood_data_loader)
+            print 'pre-train epoch ', epoch, 'test_loss ', test_loss
+            buffer = str(epoch) + ' ' + str(test_loss) + '\n'
+            log.write(buffer)
+
+    generate_samples(sess, generator, GCONFIG.BATCH_SIZE, generated_num, eval_file)
+    likelihood_data_loader.create_batches(eval_file)
+    test_loss = target_loss(sess, target_lstm, likelihood_data_loader)
+    buffer = 'After pre-training:' + ' ' + str(test_loss) + '\n'
+    log.write(buffer)
+
     generate_samples(sess, generator, GCONFIG.BATCH_SIZE, generated_num, eval_file)
     likelihood_data_loader.create_batches(eval_file)
     significance_test(sess, target_lstm, likelihood_data_loader, 'significance/supervise.txt')
@@ -226,15 +214,16 @@ def main():
 
     discsaver.save(sess, 'save/disc-sess-'+TIME+'.ckpt')
     '''
-    discsaver.restore(sess, 'save/disc-sess-20170305-085624')
+
+    discsaver.restore(sess, 'save/disc-sess-20170305-085624.ckpt')
     rollout = ROLLOUT(generator, 0.8)
     
     print '#########################################################################'
     print 'Restoring old generator/discriminator training sessions...'
 
-    gensaver.restore(sess, 'save/seagan-gen-sess-20170305-085624')
-    discsaver.restore(sess, 'save/seagan-disc-sess-20170305-085624')
-    losses = cPickle.load(open('save/seagan-loss-20170305-085624.pkl'))
+    gensaver.restore(sess, './save/seqgan-gen-sess-20170305-085624.ckpt')
+    discsaver.restore(sess, './save/seqgan-disc-sess-20170305-085624.ckpt')
+    losses = cPickle.load(open('./save/seqgan-loss-20170305-085624.pkl'))
     losses = np.concatenate((losses, np.zeros((TOTAL_BATCH, 2))), axis=0)
 
     print '#########################################################################'
@@ -286,7 +275,8 @@ def main():
         if total_batch % 5 == 0 or total_batch == TOTAL_BATCH - 1:
             gensaver.save(sess, 'save/seqgan-gen-sess-' + TIME + '.ckpt')
             discsaver.save(sess, 'save/seqgan-disc-sess-' + TIME + '.ckpt')
-            with open('save/seqgan-loss-' + TIME + '.pkl', 'w') as f:
+            #with open('save/seqgan-loss-' + TIME + '.pkl', 'w') as f:
+    	    with open('save/seqgan-loss-20170305-085624.pkl', 'w') as f:
                 cPickle.dump(losses, f, -1)
 
     sess.close()
