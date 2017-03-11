@@ -1,4 +1,6 @@
 .env/*
 *.pyc
 *.swp
-MaLi_GAN/data/*
+MaLi_GAN/data/glove_vectors.txt
+MaLi_GAN/data/glove_vectors.npy
+
