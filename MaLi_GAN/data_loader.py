@@ -1,15 +1,16 @@
 import numpy as np
 import math
+from tqdm import tqdm
 
 class DataLoader(object):
-    def __init__(self, lexicon):
+    def __init__(self, lexicon, N):
         self.batch_size = 0
         self.token_stream = []
         self.pointer = 0
         self.lexicon = lexicon
         self.SYNTHETIC = True
         self.END_TOKEN = -1
-        self.max_length = 0
+        self.max_length = N
 
     '''
     normalizes sentence length to max sentence length
@@ -18,9 +19,8 @@ class DataLoader(object):
     def pre_process_sentences(self):
         temp_token_stream = []
         num_sentences = len(self.token_stream)
-        shuffled_idx = np.random.permutation(num_sentences)
-        for _, idx in enumerate(shuffled_idx):
-            sentence = self.token_stream[idx]
+        print "Padding sentences in token_stream to " + self.max_length  + "..."
+        for sentence in tqdm(self.token_stream):
             if len(sentence) < self.max_length:
                 for i in range(self.max_length - len(sentence)):
                     sentence.append(self.END_TOKEN)
@@ -31,7 +31,8 @@ class DataLoader(object):
         self.max_length = 0
         self.token_stream = []
         with open(data_file, 'r') as f:
-            for line in f:
+            print "Parsing sentences in " + data_file + "..."
+            for line in tqdm(f):
                 parsed_line = []
                 if self.SYNTHETIC:
                     line = line.strip()
@@ -39,9 +40,8 @@ class DataLoader(object):
                     parsed_line = [int(num) for num in line]
                 else:
                     parsed_line = [self.lexicon[word] for word in line]
-                self.token_stream.append(parsed_line)
-                if len(parsed_line) > self.max_length:
-                    self.max_length = len(parsed_line)
+                if len(parsed_line) <= self.max_length:
+                    self.token_stream.append(parsed_line)
         self.token_stream = self.pre_process_sentences()
 
     def shuffle_sentences(self):
@@ -56,6 +56,3 @@ class DataLoader(object):
         shuffled_stream = shuffled_stream[:num_batch * batch_size]
         self.mini_batches = np.split(np.array(shuffled_stream), num_batch, 0)
         return self.mini_batches
-
-    def get_max_length(self):
-        return self.max_length

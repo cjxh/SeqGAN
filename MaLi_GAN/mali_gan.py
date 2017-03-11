@@ -1,28 +1,31 @@
 import tensorflow as tf
 import numpy as np
 import data_loader as dl
+from tqdm import tqdm
 # import generator
 # import discriminator
 # import evaluation
+
+# initialize constants
+T = 35
+N = T
+K = 5
 
 # populate the lexicon of existing words
 lexicon = {}
 counter = 0
 with open('word_lexicon.txt', 'r') as f:
-    for line in f:
+    print "Pre-processing and saving word lexicon in memory..."
+    for line in tqdm(f):
         for word in line:
             lexicon[word] = counter
             counter += 1
 
 # load real data
 positive_file = 'save/real_data.txt'
-data_loader = dl(lexicon)
+data_loader = dl(lexicon, N)
+print "Loading data from " + positive_file + " into memory..."
 positive_data = data_loader.load_data(positive_file)
-
-# initialize constants
-T = data_loader.get_max_length()
-N = T
-K = 1
 
 # initialize generator and discriminator
 generator = generator()
