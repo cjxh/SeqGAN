@@ -1,2 +1,0 @@
-!!python/object:config.GenConfig {BATCH_SIZE: 64, EMB_DIM: 32, HIDDEN_DIM: 32, PRE_EPOCH_NUM: 240,
-  SEED: 88, SEQ_LENGTH: 20, START_TOKEN: 0, TRAIN_ITER: 1}

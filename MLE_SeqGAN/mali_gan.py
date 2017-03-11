@@ -22,6 +22,8 @@ GCONFIG = GenConfig()
 
 TOTAL_BATCH = 10
 BATCH_SIZE = 10
+T = 20
+K = 2
 
 #########################################################################################
 #  Discriminator  Hyper-parameters
@@ -239,11 +241,9 @@ def main():
         for _ in range(5):
             # sample minibatch of sequences from p_d and p_theta...
             generate_samples(sess, generator, GCONFIG.BATCH_SIZE, generated_num, negative_file)
-            # dis_x_train, dis_y_train = dis_data_loader.load_train_data(positive_file, negative_file)
-            # dis_batches = dis_data_loader.batch_iter(zip(dis_x_train, dis_y_train), DCONFIG.DIS_BATCH_SIZE, 3)
+            dis_x_train, dis_y_train = dis_data_loader.load_train_data(positive_file, negative_file)
+            dis_batches = dis_data_loader.batch_iter(zip(dis_x_train, dis_y_train), DCONFIG.DIS_BATCH_SIZE, 3)
 
-            X_mb, _ = mnist.train.next_batch(BATCH_SIZE)
-            _, D_loss_curr = sess.run([D_solver, D_loss], feed_dict={X: X_mb, Z: sample_Z(mb_size, Z_dim)})
             for batch in dis_batches:
                 try:
                     x_batch, y_batch = zip(*batch)
@@ -258,10 +258,13 @@ def main():
                     pass
             
         # sample minibatch sequences x_i from p_d
-        _, G_loss_curr = sess.run([G_solver, G_loss], feed_dict={Z: sample_Z(mb_size, Z_dim)})
         # for each sample x_i w/ length larger than N in the minibatch, clamp the generator to the first N words of x, and freely run the model to generate m samples x_i,j, J = 1, --- m to end of sentence
-
         # update generator by applying mixed MLE-Mali grad update
+        for it in range(GCONFIG.TRAIN_ITER):
+            samples = generator.generate(sess)
+            rewards = rollout.get_reward(sess, samples, 16, cnn)
+            feed = {generator.x: samples, generator.rewards: rewards}
+            _, g_loss = sess.run([generator.g_updates, generator.g_loss], feed_dict=feed)
         
         rollout.update_params()
 
