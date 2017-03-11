@@ -8,7 +8,7 @@ import data_loader as dl
 # populate the lexicon of existing words
 lexicon = {}
 counter = 0
-with open(lexicon_file, 'r') as f:
+with open('word_lexicon.txt', 'r') as f:
     for line in f:
         for word in line:
             lexicon[word] = counter
