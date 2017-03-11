@@ -13,11 +13,14 @@ with open(lexicon_file, 'r') as f:
         for word in line:
             lexicon[word] = counter
             counter += 1
-real_data_loader = dl()
-gen_data_loader = dl()
+
+# load real data
+positive_file = 'save/real_data.txt'
+data_loader = dl(lexicon)
+positive_data = data_loader.load_data(positive_file)
 
 # initialize constants
-T = len(data[0])
+T = data_loader.get_max_length()
 N = T
 K = 1
 
@@ -33,12 +36,13 @@ while N >= 0:
     N = N - K
     for i in range(k):
         # minibatch of real training data
-        real_minibatch = real_data_loader.mini_batch(positive_file)
+        real_minibatches = data_loader.mini_batch()
         # minibatch, get first N from real_minibatch, generate the rest
-        gen_minibatch = gen_data_loader.mini_batch(negative_file) 
+        gen_minibatch = generator.generate(real_minibatches, N)
         discriminator.update_params()
     
-    new_minibatch = # minibatch of real training data
+    # minibatch of real training data
+    new_minibatch = real_data_loader.mini_batch(positive_file)
     x_ij = generator.generate(new_minibatch, N)
     generator.update_params()
         
