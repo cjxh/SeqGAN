@@ -28,8 +28,11 @@ print "Loading data from " + positive_file + " into memory..."
 positive_data = data_loader.load_data(positive_file)
 
 # initialize generator and discriminator
-generator = generator()
-discriminator = discriminator()
+generator = Generator()
+discriminator = Discriminator()
+
+sess = tf.Session()
+sess.run(tf.global_variable_initializer())
 
 # pretrain 
 # generator.pretrain()
@@ -41,11 +44,11 @@ while N >= 0:
         # minibatch of real training data
         real_minibatches = data_loader.mini_batch()
         # minibatch, get first N from real_minibatch, generate the rest
-        gen_minibatch = generator.generate(real_minibatches, N)
+        gen_minibatch = generator.generate_from_latch(sess, real_minibatches, N)
         discriminator.update_params()
     
     # minibatch of real training data
     new_minibatch = real_data_loader.mini_batch(positive_file)
-    x_ij = generator.generate(new_minibatch, N)
+    x_ij = generator.generate_from_latch(new_minibatch, N)
     generator.update_params()
         
