@@ -20,6 +20,8 @@ class Generator(object):
         h_t_1 = tf.zeros((self.batch, self.hidden_size))
         x_t = tf.embedding_lookup(self.embeddings, self.start_token)
         self.cell = tf.contrib.rnn.BasicGRUCell(self.hidden_size)
+        self.x_emb = tf.embedding_lookup()
+        self.gen_x = np.array((self.batch_size, self.sequence_length))
 
         with tf.variable_scope("RNN"):
             for time_step in range(self.sequence_length):
@@ -31,9 +33,12 @@ class Generator(object):
 
                 # update values for next time step
                 if time_step < self.latch_num:
-                    x_t = self.x.read(time_step)
+                    next_token = self.x[:, time_step]
                 else:
-                    x_t = tf.cast(tf.reshape(tf.multinomial(y_t, 1), [self.batch_size]), tf.int32)
+                    next_token = tf.cast(tf.reshape(tf.multinomial(y_t, 1), [self.batch_size]), tf.int32)
+
+                self.gen_x[:, time_step] = next_token
+                x_t = tf.embedding_lookup(self.embeddings, next_token)
                 h_t_1 = h_t
     
     def add_training_op(self, loss):
@@ -41,7 +46,12 @@ class Generator(object):
 
     def generate_from_latch(self, sess, input_x, N):
         feed = {self.x: input_x, self.latch_num: N}
-        outputs = sess.run([], feed)
+        outputs = sess.run([self.gen_x], feed)
+        return outputs[0]
+
+    def generate(self, sess):
+        feed = {self.x: None, self.latch_num: 0}
+        outputs = sess.run([self.gex_x], feed)
         return outputs[0]
         
     def update_params(self):
