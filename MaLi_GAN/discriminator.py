@@ -47,5 +47,6 @@ class Discriminator(object):
     def add_loss_op(self):
         real_loss = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=self.real_preds, tf.ones_like(self.real_preds)))
         fake_loss = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=self.fake_preds, tf.zeros_like(self.fake_preds)))
+        # add regularization?
         loss = real_loss + fake_loss
         return loss
