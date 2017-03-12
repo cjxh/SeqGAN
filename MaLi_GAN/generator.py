@@ -3,32 +3,76 @@ import numpy as np
 from tensorflow.python.ops import tensor_array_ops, control_flow_ops
 
 class Generator(object):
-    def __init__(self, sequence_length, hidden_size, vocab_size, batch_size, emb_size, start_token):
+    def __init__(self, sequence_length, hidden_size, vocab_size, batch_size, emb_size, start_token, learning_rate=.1):
         self.hidden_dim = hidden_size
         self.sequence_length = sequence_length
         self.batch_size = batch_size
         self.num_emb = vocab_size
         self.emb_dim = emb_size
-        # self.add_placeholders()
+        self.learning_rate = learning_rate
+
         self.start_token = tf.constant([start_token] * self.batch_size, dtype=tf.int32)
-        self.g_embeddings = tf.get_variable('embedding', initializer=tf.random_normal([self.num_emb, self.emb_dim], stddev=.1))
+        self.g_embeddings = tf.get_variable('g_embeddings', initializer=self.init_matrix([self.num_emb, self.emb_dim]))
         
         self.g_recurrent_unit = self.create_recurrent_unit()  # maps h_tm1 to h_t for generator
         self.g_output_unit = self.create_output_unit()  # maps h_t to o_t (output token logits)
 
-        #####################################################################################################
-        # placeholder definition
         self.add_placeholders()
 
-        # processed for batch
-        self.build_rnn()
+        # build the basic graphs
+        self.preprocess_x()
+        self.build_latch_rnn()
+        self.build_pretrain()
 
+        # pretraining functions
+        self.add_pretrain_loss_op()
+        self.add_pretrain_op()
         
+    ###### Client functions ###################################################################
+    def pretrain_one_step(self, sess, input_x):
+        #### Call this to pretrain #######
+        feed = {self.x: input_x}
+        _, loss = sess.run([self.pretrain_op, self.pretrain_loss], feed_dict=feed)
+        return loss
+
+    def generate_from_latch(self, sess, input_x, N):
+        feed = {self.x: input_x, self.given_num: N}
+        outputs = sess.run([self.gen_x], feed)
+        return outputs[0]
+
+
+    def generate(self, sess):
+        dummy = np.zeros((self.batch_size, self.sequence_length))
+        feed = {self.x: dummy, self.given_num: 0}
+        outputs = sess.run([self.gen_x], feed)
+        return outputs[0]
+
+    ############################################################################################
+
+
+
     def add_placeholders(self):
         self.x = tf.placeholder(tf.int32, shape=[self.batch_size, self.sequence_length])
         self.given_num = tf.placeholder(tf.int32)
 
-    def build_rnn(self):
+    def add_pretrain_op(self):
+        optimizer = tf.train.GradientDescentOptimizer(learning_rate=self.learning_rate)
+
+        grads_and_vars = optimizer.compute_gradients(self.pretrain_loss)
+        grads_and_vars = zip(*grads_and_vars)
+        gradients = grads_and_vars[0]
+        variables = grads_and_vars[1]
+        gradients, global_norm = tf.clip_by_global_norm(gradients, 5.0)
+        self.pretrain_op = optimizer.apply_gradients(zip(gradients, variables))
+
+    def add_pretrain_loss_op(self):
+        self.pretrain_loss = -tf.reduce_sum(
+            tf.one_hot(tf.to_int32(tf.reshape(self.x, [-1])), self.num_emb, 1.0, 0.0) * tf.log(
+                tf.clip_by_value(tf.reshape(self.g_predictions, [-1, self.num_emb]), 1e-20, 1.0)
+            )
+        ) / (self.sequence_length * self.batch_size)
+
+    def preprocess_x(self):
         with tf.device("/cpu:0"):
             inputs = tf.split(1, self.sequence_length, tf.nn.embedding_lookup(self.g_embeddings, self.x))
             self.processed_x = tf.pack(
@@ -36,12 +80,34 @@ class Generator(object):
 
         ta_emb_x = tensor_array_ops.TensorArray( 
             dtype=tf.float32, size=self.sequence_length)
-        ta_emb_x = ta_emb_x.unpack(self.processed_x)
+        self.ta_emb_x = ta_emb_x.unpack(self.processed_x)
 
         ta_x = tensor_array_ops.TensorArray(dtype=tf.int32, size=self.sequence_length)
-        ta_x = ta_x.unpack(tf.transpose(self.x, perm=[1, 0]))
-        #####################################################################################################
+        self.ta_x = ta_x.unpack(tf.transpose(self.x, perm=[1, 0]))
 
+    def build_pretrain(self):
+        g_predictions = tensor_array_ops.TensorArray(
+            dtype=tf.float32, size=self.sequence_length,
+            dynamic_size=False, infer_shape=True)
+
+        def _pretrain_recurrence(i, x_t, h_tm1, g_predictions):
+            h_t = self.g_recurrent_unit(x_t, h_tm1)
+            o_t = self.g_output_unit(h_t)
+            g_predictions = g_predictions.write(i, tf.nn.softmax(o_t))  # batch x vocab_size
+            x_tp1 = self.ta_emb_x.read(i)
+            return i + 1, x_tp1, h_t, g_predictions
+
+        _, _, _, self.g_predictions = control_flow_ops.while_loop(
+            cond=lambda i, _1, _2, _3: i < self.sequence_length,
+            body=_pretrain_recurrence,
+            loop_vars=(tf.constant(0, dtype=tf.int32),
+                       tf.nn.embedding_lookup(self.g_embeddings, self.start_token),
+                       self.h0, g_predictions))
+
+        self.g_predictions = tf.transpose(
+            self.g_predictions.pack(), perm=[1, 0, 2])  # batch_size x seq_length x vocab_size
+
+    def build_latch_rnn(self):
         self.h0 = tf.zeros([self.batch_size, self.hidden_dim])
         self.h0 = tf.pack([self.h0, self.h0])
 
@@ -50,8 +116,8 @@ class Generator(object):
 
         def _g_recurrence_1(i, x_t, h_tm1, given_num, gen_x):
             h_t = self.g_recurrent_unit(x_t, h_tm1)  # hidden_memory_tuple
-            x_tp1 = ta_emb_x.read(i)
-            gen_x = gen_x.write(i, ta_x.read(i))
+            x_tp1 = self.ta_emb_x.read(i)
+            gen_x = gen_x.write(i, self.ta_x.read(i))
             return i + 1, x_tp1, h_t, given_num, gen_x
 
         def _g_recurrence_2(i, x_t, h_tm1, given_num, gen_x):
@@ -77,25 +143,14 @@ class Generator(object):
         self.gen_x = self.gen_x.pack()  # seq_length x batch_size
         self.gen_x = tf.transpose(self.gen_x, perm=[1, 0])  # batch_size x seq_length
 
-    def add_training_op(self, loss):
-        pass
-
-    def generate_from_latch(self, sess, input_x, N):
-        feed = {self.x: input_x, self.given_num: N}
-        outputs = sess.run([self.gen_x], feed)
-        return outputs[0]
-
-    def generate(self, sess):
-        feed = {self.x: None, self.latch_num: 0}
-        outputs = sess.run([self.gex_x], feed)
-        return outputs[0]
-        
-    def update_params(self):
-        pass
-
     def init_matrix(self, shape):
         return tf.random_normal(shape, stddev=0.1)
 
+        
+
+
+
+    ############### Defining the RNN cell #############################################
     def create_recurrent_unit(self):
         # Weights and Bias for input and hidden tensor
         self.Wi = tf.get_variable('Wi', shape=[self.emb_dim, self.hidden_dim], \
@@ -173,3 +228,4 @@ class Generator(object):
             return logits
 
         return unit
+    ###############################################################################################

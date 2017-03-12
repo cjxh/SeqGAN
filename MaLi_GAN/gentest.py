@@ -12,8 +12,13 @@ sess = tf.Session()
 sess.run(tf.global_variables_initializer())
 
 data = np.ones((3, 5)) * 2
+pretrain_data = np.ones((3, 5)) * 2
+
+loss = generator.pretrain_one_step(sess, pretrain_data)
+print loss
 
 result = generator.generate_from_latch(sess, data, 2)
+result = generator.generate(sess)
 
 print result
 
