@@ -7,7 +7,7 @@ class Discriminator(object):
         self.batch_size = batch_size
         self.sequence_length = sequence_length
         self.n_classes = n_classes
-        self.n_hidden = 1
+        self.n_hidden = 150
         self.pretrained_embeddings = pretrained_embeddings
 
         self.add_placeholders()
@@ -38,11 +38,13 @@ class Discriminator(object):
         self.cell_bw = tf.contrib.rnn.BasicGRUCell(self.hidden_size)
 
         if isReal:
-            outputs, _, _ = tf.nn.bidirectional_rnn(self.cell_fw, self.cell_bw, self.x, dtype=tf.float32)
+            outputs, output_states = tf.nn.bidirectional_dynamic_rnn(self.cell_fw, self.cell_bw, self.x, dtype=tf.float32)
+            output_state = tf.concat(output_states, 1)
+            return tf.matmul(output_state, self.weights) + self.biases
         else:
-            outputs, _, _ = tf.nn.bidirectional_rnn(self.cell_fw, self.cell_bw, self.y, dtype=tf.float32)
-
-        return tf.matmul(outputs[-1], self.weights) + self.biases
+            outputs, output_states = tf.nn.bidirectional_dynamic_rnn(self.cell_fw, self.cell_bw, self.y, dtype=tf.float32)
+            output_state = tf.concat(output_states, 1)
+            return tf.matmul(outputs_state, self.weights) + self.biases
 
     def add_loss_op(self):
         real_loss = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=self.real_preds, tf.ones_like(self.real_preds)))
