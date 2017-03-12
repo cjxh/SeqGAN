@@ -3,13 +3,16 @@ import numpy as np
 import data_loader as dl
 from tqdm import tqdm
 # import generator
-# import discriminator
+import Discriminator
 # import evaluation
+
+def train_discriminator():
 
 # initialize constants
 T = 35
 N = T
 K = 5
+k = 5
 DROPOUT_KEEP_PROB = 0.75
 batch_size = 32
 embedding_size = 300
@@ -48,6 +51,20 @@ sess.run(tf.global_variable_initializer())
 # pretrain 
 # generator.pretrain()
 # discriminator.pretrain()
+for i in range(k):
+    # minibatches of real training data ... do they mean 1 or all minibatches??
+    real_minibatches = data_loader.mini_batch(batch_size)
+    # minibatch, get first N from real_minibatch, generate the rest
+    gen_minibatch = generator.generate_from_latch(sess, real_minibatches, N)
+    dis_batches = zip(dis_x_train, dis_y_train)
+    for batch in dis_batches:
+        x_batch, y_batch = zip(*batch)
+        feed = {
+            discriminator.input_x: x_batch,
+            discriminator.input_y: y_batch,
+            discriminator.dropout_keep_prob: DROPOUT_KEEP_PROB
+        }
+        _, step = sess.run([dis_train_op, dis_global_step], feed)
 
 while N >= 0:
     N = N - K
@@ -56,10 +73,6 @@ while N >= 0:
         real_minibatches = data_loader.mini_batch(batch_size)
         # minibatch, get first N from real_minibatch, generate the rest
         gen_minibatch = generator.generate_from_latch(sess, real_minibatches, N)
-        # calculate loss on real minibatches
-        # calculate loss on fake minibatches
-        # add 2 losses
-        # gradient ascend of the sum
         dis_batches = zip(dis_x_train, dis_y_train)
         for batch in dis_batches:
             x_batch, y_batch = zip(*batch)
