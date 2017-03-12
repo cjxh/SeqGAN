@@ -14,16 +14,17 @@ class Discriminator(object):
         self.x, self.y = self.add_embeddings()
         self.real_preds = self.build(True)
         self.fake_preds = self.build(False)
+        self.loss = self.add_loss_op()
 
     def add_placeholders(self):
-        self.real_input_placeholder = tf.placeholder(tf.int32, shape=[self.batch_size, self.sequence_length])
-        self.fake_input_placeholder = tf.placeholder(tf.int32, shape=[self.batch_size, self.sequence_length])
+        self.input_x = tf.placeholder(tf.int32, shape=[self.batch_size, self.sequence_length])
+        self.input_y = tf.placeholder(tf.int32, shape=[self.batch_size, self.sequence_length])
         self.dropout_keep_prob = tf.placeholder(tf.float32, name="dropout_keep_prob")
 
     def add_embedding(self):
         embeddings = tf.Variable(self.pretrained_embeddings)
-        real_embeddings = tf.nn.embedding_lookup(embeddings, self.real_input_placeholder)
-        fake_embeddings = tf.nn.embedding_lookup(embeddings, self.fake_input_placeholder)
+        real_embeddings = tf.nn.embedding_lookup(embeddings, self.input_x)
+        fake_embeddings = tf.nn.embedding_lookup(embeddings, self.input_y)
         return real_embeddings, fake_embeddings
     
     def build(self, isReal):
@@ -41,10 +42,10 @@ class Discriminator(object):
         else:
             outputs, _, _ = tf.nn.bidirectional_rnn(self.cell_fw, self.cell_bw, self.y, dtype=tf.float32)
 
-        return tf.matmul((outputs[-1], self.weights['out']) + self.biases['out']
+        return tf.matmul(outputs[-1], self.weights) + self.biases
 
-    def discriminator(self, inputs):
+    def add_loss_op(self):
         real_loss = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=self.real_preds, tf.ones_like(self.real_preds)))
         fake_loss = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=self.fake_preds, tf.zeros_like(self.fake_preds)))
         loss = real_loss + fake_loss
-        solver = tf.train.AdamOptimizer().minimize(-loss, var_list=self.theta)
+        return loss
