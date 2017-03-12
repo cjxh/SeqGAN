@@ -6,8 +6,6 @@ from tqdm import tqdm
 import Discriminator
 # import evaluation
 
-def train_discriminator():
-
 # initialize constants
 T = 35
 N = T
@@ -38,11 +36,11 @@ pretrained_embeddings = np.load('data/glove_vectors.npy')
 # initialize generator and discriminator
 gen = Generator()
 with tf.variable_scope('discriminator'):
-    dis = Discriminator(N, batch_size, embedding_size, n_classes, pretrained_embeddings)
+    dis = Discriminator(N, batch_size, n_classes, pretrained_embeddings)
 dis_params = [param for param in tf.trainable_variables() if 'discriminator' in param.name]
 dis_global_step = tf.Variable(0, name="global_step", trainable=False)
 dis_optimizer = tf.train.AdamOptimizer(1e-4)
-dis_grads_and_vars = dis_optimizer.compute_gradients(dis.loss, dis_params, aggregation_method=2)
+dis_grads_and_vars = dis_optimizer.compute_gradients(dis.loss, dis_params)
 dis_train_op = dis_optimizer.apply_gradients(dis_grads_and_vars, global_step=dis_global_step)
 
 sess = tf.Session()
@@ -72,8 +70,8 @@ while N >= 0:
         # minibatches of real training data ... do they mean 1 or all minibatches??
         real_minibatches = data_loader.mini_batch(batch_size)
         # minibatch, get first N from real_minibatch, generate the rest
-        gen_minibatch = generator.generate_from_latch(sess, real_minibatches, N)
-        dis_batches = zip(dis_x_train, dis_y_train)
+        gen_minibatches = generator.generate_from_latch(sess, real_minibatches, N)
+        dis_batches = zip(real_minibatches, gen_minibatches)
         for batch in dis_batches:
             x_batch, y_batch = zip(*batch)
             feed = {

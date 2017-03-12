@@ -11,7 +11,7 @@ class Discriminator(object):
         self.pretrained_embeddings = pretrained_embeddings
 
         self.add_placeholders()
-        self.x, self.y = self.add_embeddings()
+        self.x, self.y = self.add_embedding()
         self.real_preds = self.build(True)
         self.fake_preds = self.build(False)
         self.loss = self.add_loss_op()
@@ -25,7 +25,7 @@ class Discriminator(object):
         embeddings = tf.Variable(self.pretrained_embeddings)
         real_embeddings = tf.nn.embedding_lookup(embeddings, self.input_x)
         fake_embeddings = tf.nn.embedding_lookup(embeddings, self.input_y)
-        return real_embeddings, fake_embeddings
+        return tf.cast(real_embeddings, tf.float32), tf.cast(fake_embeddings, tf.float32)
     
     def build(self, isReal):
         # Define weights
@@ -34,21 +34,23 @@ class Discriminator(object):
         self.biases = tf.Variable(tf.random_normal([self.n_classes]))
         self.theta = [self.weights, self.biases]
         
-        self.cell_fw = tf.contrib.rnn.BasicGRUCell(self.hidden_size)
-        self.cell_bw = tf.contrib.rnn.BasicGRUCell(self.hidden_size)
+        self.cell_fw = tf.contrib.rnn.GRUCell(self.n_hidden)
+        self.cell_bw = tf.contrib.rnn.GRUCell(self.n_hidden)
 
         if isReal:
-            outputs, output_states = tf.nn.bidirectional_dynamic_rnn(self.cell_fw, self.cell_bw, self.x, dtype=tf.float32)
-            output_state = tf.concat(output_states, 1)
-            return tf.matmul(output_state, self.weights) + self.biases
+            with tf.variable_scope('real_discriminator'):
+                outputs, output_states = tf.nn.bidirectional_dynamic_rnn(self.cell_fw, self.cell_bw, self.x, dtype=tf.float32, sequence_length=(self.sequence_length * np.ones(self.batch_size)))
+                output_state = tf.concat(output_states, 1)
+                return tf.matmul(output_state, self.weights) + self.biases
         else:
-            outputs, output_states = tf.nn.bidirectional_dynamic_rnn(self.cell_fw, self.cell_bw, self.y, dtype=tf.float32)
-            output_state = tf.concat(output_states, 1)
-            return tf.matmul(outputs_state, self.weights) + self.biases
+            with tf.variable_scope('fake_discriminator'):
+                outputs, output_states = tf.nn.bidirectional_dynamic_rnn(self.cell_fw, self.cell_bw, self.y, dtype=tf.float32, sequence_length=(self.sequence_length * np.ones(self.batch_size)))
+                output_state = tf.concat(output_states, 1)
+                return tf.matmul(output_state, self.weights) + self.biases
 
     def add_loss_op(self):
-        real_loss = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=self.real_preds, tf.ones_like(self.real_preds)))
-        fake_loss = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=self.fake_preds, tf.zeros_like(self.fake_preds)))
+        real_loss = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=self.real_preds, labels=tf.ones_like(self.real_preds)))
+        fake_loss = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=self.fake_preds, labels=tf.zeros_like(self.fake_preds)))
         # add regularization?
         loss = real_loss + fake_loss
         return loss
