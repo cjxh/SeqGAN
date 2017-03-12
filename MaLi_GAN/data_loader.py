@@ -4,7 +4,6 @@ from tqdm import tqdm
 
 class DataLoader(object):
     def __init__(self, lexicon, N):
-        self.batch_size = 0
         self.token_stream = []
         self.pointer = 0
         self.lexicon = lexicon
