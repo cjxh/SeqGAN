@@ -18,6 +18,7 @@ n_classes = 2
 
 # populate the lexicon of existing words
 lexicon = {}
+'''
 counter = 0
 with open('data/word_lexicon.txt', 'r') as f:
     print "Pre-processing and saving word lexicon in memory..."
@@ -25,16 +26,21 @@ with open('data/word_lexicon.txt', 'r') as f:
         for word in line:
             lexicon[word] = counter
             counter += 1
+'''
 
 # load real data
 positive_file = 'save/real_data.txt'
-data_loader = dl(lexicon, N)
+data_loader = dl(lexicon, N, batch_size)
 print "Loading data from " + positive_file + " into memory..."
 positive_data = data_loader.load_data(positive_file)
+'''
 pretrained_embeddings = np.load('data/glove_vectors.npy')
+'''
+pretrained_embeddings = tf.random_normal([5000, 300])
 
 # initialize generator and discriminator
-gen = Generator(len(pretrained_embeddings), batch_size, 300, 150, T, 0, 10)
+with tf.variable_scope('generator'):
+    gen = Generator(5000, batch_size, 300, 150, T, 0, 10, pretrained_embeddings)
 with tf.variable_scope('discriminator'):
     dis = Discriminator(N, batch_size, n_classes, pretrained_embeddings)
 dis_params = [param for param in tf.trainable_variables() if 'discriminator' in param.name]
@@ -44,30 +50,32 @@ dis_grads_and_vars = dis_optimizer.compute_gradients(dis.loss, dis_params)
 dis_train_op = dis_optimizer.apply_gradients(dis_grads_and_vars, global_step=dis_global_step)
 
 sess = tf.Session()
-sess.run(tf.global_variable_initializer())
+init = tf.global_variables_initializer()
+sess.run(init)
+# sess.run(tf.global_variables_initializer())
 
 # pretrain 
 # generator.pretrain()
-for i in range(100):
-    gen.pretrain_one_epoch(data_loader)
+for i in range(1):
+    gen.pretrain_one_epoch(sess, data_loader)
 # discriminator.pretrain()
-for i in range(k):
+for i in tqdm(range(k)):
     # minibatches of real training data ... do they mean 1 or all minibatches??
-    real_minibatches = data_loader.mini_batch(batch_size)
+    real_minibatches = data_loader.next_batch()
     # minibatch, get first N from real_minibatch, generate the rest
     gen_minibatches = generator.generate_from_latch(sess, real_minibatches, N)
-    dis_x_train = [np.concatenate((real_minibatches[i], gen_minibatches[i]), axis=0) for i in range(0, len(real_minibatches))]
+    dis_x_train = [np.concatenate((real_minibatches[i], gen_minibatches[i]), axis=0) for i in range(0, len(real_minibatches))] 
+    real = np.ones((batch_size,1))
+    fake = np.zeros((batch_size,1))
+    dis_y_real = np.concatenate((real, fake), axis=1)
+    dis_y_fake = np.concatenate((fake, real), axis=1)
+    dis_y_train = np.concatenate((dis_y_real, dis_y_fake), axis=0)
+
+    shuffle_idx = np.random.permutation(np.arange(2 * batch_size))
+    shuffled_x =  batch[shuffle_idx]
+    shuffled_y =  dis_y_train[shuffle_idx]
     
     for batch in dis_x_train:
-        real = np.ones((batch_size,1))
-        fake = np.zeros((batch_size,1))
-        dis_y_real = np.concatenate((real, fake), axis=1)
-        dis_y_fake = np.concatenate((fake, real), axis=1)
-        dis_y_train = np.concatenate((dis_y_real, dis_y_fake), axis=0)
-
-        shuffle_idx = np.random.permutation(np.arange(2 * batch_size))
-        shuffled_x =  batch[shuffle_idx]
-        shuffled_y =  dis_y_train[shuffle_idx]
         x_batch, y_batch = zip(*batch)
         feed = {
             discriminator.input_x: x_batch,
@@ -80,21 +88,21 @@ while N >= 0:
     N = N - K
     for i in range(k):
         # minibatches of real training data ... do they mean 1 or all minibatches??
-        real_minibatches = data_loader.mini_batch(batch_size)
+        real_minibatches = data_loader.next_batch()
         # minibatch, get first N from real_minibatch, generate the rest
-        gen_minibatches = generator.generate_from_latch(sess, real_minibatches, N)
-        dis_x_train = [np.concatenate((real_minibatches[i], gen_minibatches[i]), axis=0) for i in range(0, len(real_minibatches))]
+        gen_minibatches = gen.generate_from_latch(sess, real_minibatches, N)
+        dis_x_train = [np.concatenate((real_minibatches[i], gen_minibatches[i]), axis=0) for i in range(0, len(real_minibatches))] 
+        real = np.ones((batch_size,1))
+        fake = np.zeros((batch_size,1))
+        dis_y_real = np.concatenate((real, fake), axis=1)
+        dis_y_fake = np.concatenate((fake, real), axis=1)
+        dis_y_train = np.concatenate((dis_y_real, dis_y_fake), axis=0)
+
+        shuffle_idx = np.random.permutation(np.arange(2 * batch_size))
+        shuffled_x =  batch[shuffle_idx]
+        shuffled_y =  dis_y_train[shuffle_idx]
         
         for batch in dis_x_train:
-            real = np.ones((batch_size,1))
-            fake = np.zeros((batch_size,1))
-            dis_y_real = np.concatenate((real, fake), axis=1)
-            dis_y_fake = np.concatenate((fake, real), axis=1)
-            dis_y_train = np.concatenate((dis_y_real, dis_y_fake), axis=0)
-
-            shuffle_idx = np.random.permutation(np.arange(2 * batch_size))
-            shuffled_x =  batch[shuffle_idx]
-            shuffled_y =  dis_y_train[shuffle_idx]
             x_batch, y_batch = zip(*batch)
             feed = {
                 discriminator.input_x: x_batch,

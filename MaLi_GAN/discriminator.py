@@ -8,7 +8,7 @@ class Discriminator(object):
         self.sequence_length = sequence_length
         self.n_classes = n_classes
         self.n_hidden = 150
-        self.pretrained_embeddings = pretrained_embeddings
+        self.g_embeddings = pretrained_embeddings
 
         self.add_placeholders()
         self.x = self.add_embedding()
@@ -21,7 +21,7 @@ class Discriminator(object):
         self.dropout_keep_prob = tf.placeholder(tf.float32, name="dropout_keep_prob")
 
     def add_embedding(self):
-        embeddings = tf.Variable(self.pretrained_embeddings)
+        embeddings = tf.Variable(self.g_embeddings)
         embeddings = tf.nn.embedding_lookup(embeddings, self.input_x)
         return tf.cast(embeddings, tf.float32)
     
@@ -35,12 +35,10 @@ class Discriminator(object):
         self.cell_bw = tf.contrib.rnn.GRUCell(self.n_hidden)
 
         with tf.variable_scope('preds'):
-            print self.sequence_length * np.ones(self.batch_size)
-            outputs, output_states = tf.nn.bidirectional_dynamic_rnn(self.cell_fw, self.cell_bw, self.x, dtype=tf.float32, sequence_length=(self.sequence_length * np.ones(self.batch_size)))
+            outputs, output_states = tf.nn.bidirectional_dynamic_rnn(self.cell_fw, self.cell_bw, self.x, dtype=tf.float32, sequence_length=(self.sequence_length * np.ones(1)))
             output_state = tf.concat(output_states, 1)
         
         preds = tf.matmul(output_state, self.weights) + self.biases
-        print preds.get_shape()
         return preds
 
     def add_loss_op(self):

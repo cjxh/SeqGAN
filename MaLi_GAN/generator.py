@@ -1,12 +1,13 @@
 import tensorflow as tf
 import numpy as np
 from tensorflow.python.ops import tensor_array_ops, control_flow_ops
+from tqdm import tqdm
 
 class Generator(object):
     def __init__(self, num_emb, batch_size, emb_dim, hidden_dim,
-                 sequence_length, start_token, m,
+                 sequence_length, start_token, m, pretrained_embeddings, 
                  learning_rate=0.01, reward_gamma=0.95):
-        self.hidden_dim = hidden_dim
+        self.hidden_dim = 10
         self.sequence_length = sequence_length
         self.batch_size = batch_size
         self.num_emb = num_emb
@@ -16,7 +17,8 @@ class Generator(object):
         self.baseline = 0
 
         self.start_token = tf.constant([start_token] * self.batch_size, dtype=tf.int32)
-        self.g_embeddings = tf.get_variable('g_embeddings', initializer=self.init_matrix([self.num_emb, self.emb_dim]))
+        #self.g_embeddings = pretrained_embeddings #tf.get_variable('g_embeddings', initializer=self.init_matrix([self.num_emb, self.emb_dim]))
+        self.g_embeddings = pretrained_embeddings
         
         self.g_recurrent_unit = self.create_recurrent_unit()  # maps h_tm1 to h_t for generator
         self.g_output_unit = self.create_output_unit()  # maps h_t to o_t (output token logits)
@@ -48,9 +50,9 @@ class Generator(object):
         supervised_g_losses = []
         data_loader.reset_pointer()
 
-        for it in xrange(data_loader.num_batch):
+        for it in tqdm(xrange(data_loader.num_batch)):
             batch = data_loader.next_batch()
-            g_loss = gen.pretrain_one_step(sess, batch)
+            g_loss = self.pretrain_one_step(sess, batch)
             supervised_g_losses.append(g_loss)
 
         return np.mean(supervised_g_losses)
@@ -108,11 +110,11 @@ class Generator(object):
             body=body_, 
             loop_vars=(tf.constant(0, dtype=tf.int32), x_ij, preds_ijs))
 
-        x_ij = x_ij.pack() # m x batch_size x seq len
+        x_ij = x_ij.stack() # m x batch_size x seq len
         self.x_ij = tf.transpose(x_ij, perm=[1, 0, 2]) # batch_size x m x seqlen
         self.x_ij = tf.reshape(self.x_ij, [self.batch_size * self.m, self.sequence_length])
 
-        preds_ijs = preds_ijs.pack()
+        preds_ijs = preds_ijs.stack()
         preds_ijs = tf.transpose(preds_ijs, perm=[1, 0, 2, 3])
         self.preds_ijs = tf.reshape(preds_ijs, [self.batch_size * self.m, self.sequence_length, self.num_emb])
 
@@ -140,16 +142,17 @@ class Generator(object):
 
     def preprocess_x(self):
         with tf.device("/cpu:0"):
-            inputs = tf.split(1, self.sequence_length, tf.nn.embedding_lookup(self.g_embeddings, self.x))
-            self.processed_x = tf.pack(
+            print self.sequence_length
+            inputs = tf.split(tf.nn.embedding_lookup(self.g_embeddings, self.x), self.sequence_length, 1)
+            self.processed_x = tf.stack(
                 [tf.squeeze(input_, [1]) for input_ in inputs])  # seq_length x batch_size x emb_dim
 
         ta_emb_x = tensor_array_ops.TensorArray( 
             dtype=tf.float32, size=self.sequence_length, clear_after_read=False)
-        self.ta_emb_x = ta_emb_x.unpack(self.processed_x)
+        self.ta_emb_x = ta_emb_x.unstack(self.processed_x)
 
         ta_x = tensor_array_ops.TensorArray(dtype=tf.int32, size=self.sequence_length, clear_after_read=False)
-        self.ta_x = ta_x.unpack(tf.transpose(self.x, perm=[1, 0]))
+        self.ta_x = ta_x.unstack(tf.transpose(self.x, perm=[1, 0]))
 
     def build_pretrain(self):
         g_predictions = tensor_array_ops.TensorArray(
@@ -171,11 +174,11 @@ class Generator(object):
                        self.h0, g_predictions))
 
         return tf.transpose(
-            g_predictions.pack(), perm=[1, 0, 2])  # batch_size x seq_length x vocab_size
+            g_predictions.stack(), perm=[1, 0, 2])  # batch_size x seq_length x vocab_size
 
     def build_latch_rnn(self):
         self.h0 = tf.zeros([self.batch_size, self.hidden_dim])
-        self.h0 = tf.pack([self.h0, self.h0])
+        self.h0 = tf.stack([self.h0, self.h0])
 
         gen_x = tensor_array_ops.TensorArray(dtype=tf.int32, size=self.sequence_length,
                                              dynamic_size=False, infer_shape=True,
@@ -207,7 +210,7 @@ class Generator(object):
             body=_g_recurrence_2,
             loop_vars=(i, x_t, h_tm1, given_num, gen_x))
 
-        gen_x = gen_x.pack()  # seq_length x batch_size
+        gen_x = gen_x.stack()  # seq_length x batch_size
         return tf.transpose(gen_x, perm=[1, 0])  # batch_size x seq_length
 
     def init_matrix(self, shape):
@@ -246,7 +249,7 @@ class Generator(object):
 
 
         def unit(x, hidden_memory_tm1):
-            previous_hidden_state, c_prev = tf.unpack(hidden_memory_tm1)
+            previous_hidden_state, c_prev = tf.unstack(hidden_memory_tm1)
 
             # Input Gate
             i = tf.sigmoid(
@@ -278,7 +281,7 @@ class Generator(object):
             # Current Hidden state
             current_hidden_state = o * tf.nn.tanh(c)
 
-            return tf.pack([current_hidden_state, c])
+            return tf.stack([current_hidden_state, c])
 
         return unit
 
@@ -288,7 +291,7 @@ class Generator(object):
         self.bo = tf.get_variable('bo', initializer=self.init_matrix([self.num_emb]))
 
         def unit(hidden_memory_tuple):
-            hidden_state, c_prev = tf.unpack(hidden_memory_tuple)
+            hidden_state, c_prev = tf.unstack(hidden_memory_tuple)
             # hidden_state : batch x hidden_dim
             logits = tf.matmul(hidden_state, self.Wo) + self.bo
             # output = tf.nn.softmax(logits)
