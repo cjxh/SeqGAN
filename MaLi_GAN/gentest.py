@@ -3,22 +3,24 @@ from lstm import LSTM
 import tensorflow as tf 
 import numpy as np
 
+#num_emb, batch_size, emb_dim, hidden_dim, sequence_length, start_token,
 with tf.variable_scope('generator'):
-	generator = Generator(5, 6, 4, 3, 7, 0)
+	generator = Generator(4, 3, 6, 7, 5, 0, 4)
 
 # generator = LSTM(4, 3, 7, 6, 5, 0)
 
 sess = tf.Session()
 sess.run(tf.global_variables_initializer())
 
-data = np.ones((3, 5)) * 2
-pretrain_data = np.ones((3, 5)) * 2
+data = np.array([[1,3,2,1,1],
+				[3,2,1,2,2],
+				[2,3,1,2,3]])
 
-loss = generator.pretrain_one_step(sess, pretrain_data)
-print loss
+#loss = generator.pretrain_one_step(sess, pretrain_data)
+# print loss
 
-result = generator.generate_from_latch(sess, data, 2)
-result = generator.generate(sess)
+result = generator.generate_x_ij(sess, data, 2)
+#result = generator.generate(sess)
 
 print result
 

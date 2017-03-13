@@ -34,7 +34,8 @@ positive_data = data_loader.load_data(positive_file)
 pretrained_embeddings = np.load('data/glove_vectors.npy')
 
 # initialize generator and discriminator
-gen = Generator()
+with tf.variable_scope('generator'):
+    gen = Generator()
 with tf.variable_scope('discriminator'):
     dis = Discriminator(N, batch_size, n_classes, pretrained_embeddings)
 dis_params = [param for param in tf.trainable_variables() if 'discriminator' in param.name]
@@ -46,9 +47,11 @@ dis_train_op = dis_optimizer.apply_gradients(dis_grads_and_vars, global_step=dis
 sess = tf.Session()
 sess.run(tf.global_variable_initializer())
 
-# pretrain 
-# generator.pretrain()
-# discriminator.pretrain()
+# pretrain generator
+for i in range(10):
+    gen.pretrain_one_epoch(sess, data_loader)
+
+#pretrain discriminator
 for i in range(k):
     # minibatches of real training data ... do they mean 1 or all minibatches??
     real_minibatches = data_loader.mini_batch(batch_size)
@@ -64,6 +67,8 @@ for i in range(k):
         }
         _, step = sess.run([dis_train_op, dis_global_step], feed)
 
+
+# run algorithm
 while N >= 0:
     N = N - K
     for i in range(k):
@@ -83,5 +88,5 @@ while N >= 0:
     
     # minibatch of real training data
     new_minibatch = real_data_loader.mini_batch(positive_file)
-    x_ij = generator.generate_from_latch(new_minibatch, N)
+    x_ij = generator.generate_x_ij(sess, new_minibatch, N, m)
     generator.update_params()
