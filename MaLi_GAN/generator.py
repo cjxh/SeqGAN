@@ -30,11 +30,12 @@ class Generator(object):
         self.build_xij()
 
         # pretraining functions
-        self.add_pretrain_loss_op()
-        self.add_pretrain_op()
+        self.add_pretrain_loss()
+        self.pretrain_op = self.add_train_op(self.pretrain_loss)
 
         # maligan functions
-        self.add_train_op()
+        self.add_train_loss()
+        self.train_op = self.add_train_op(self.train_loss)
         
     ###### Client functions ###################################################################
     def pretrain_one_step(self, sess, input_x):
@@ -76,18 +77,16 @@ class Generator(object):
         norm_rewards = (rewards / np.sum(rewards, axis=1)) - self.baseline
         rewards = np.reshape(norm_rewards, (self.batch_size * self.m))
         feed = {self.x_ij: xij, self.rewards: rewards}
-        return sess.run([self.train_loss], feed)
+        return sess.run([self.train_op], feed)
 
     ############################################################################################
-
-
 
 
     ########## graph building ########################################
     def RD(reward):
         return reward / (1-reward)
 
-    def add_train_op(self):
+    def add_train_loss(self):
         contrib = tf.reduce_sum(tf.one_hot(tf.to_int32(self.x_ij), self.num_emb, 1.0, 0.0) * \
             tf.log(tf.clip_by_value(self.preds_ijs, 1e-20, 1.0)), 2)
         masked = tf.slice(contrib, [0, self.given_num], [-1, -1])
@@ -122,7 +121,7 @@ class Generator(object):
         self.given_num = tf.placeholder(tf.int32)
         self.rewards = tf.placeholder(tf.float32, shape=[self.m * self.batch_size])
 
-    def add_pretrain_op(self):
+    def add_train_op(self, loss):
         optimizer = tf.train.GradientDescentOptimizer(learning_rate=self.learning_rate)
 
         grads_and_vars = optimizer.compute_gradients(self.pretrain_loss)
@@ -130,9 +129,9 @@ class Generator(object):
         gradients = grads_and_vars[0]
         variables = grads_and_vars[1]
         gradients, global_norm = tf.clip_by_global_norm(gradients, 5.0)
-        self.pretrain_op = optimizer.apply_gradients(zip(gradients, variables))
+        return optimizer.apply_gradients(zip(gradients, variables))
 
-    def add_pretrain_loss_op(self):
+    def add_pretrain_loss(self):
         self.pretrain_loss = -tf.reduce_sum(
             tf.one_hot(tf.to_int32(tf.reshape(self.x, [-1])), self.num_emb, 1.0, 0.0) * tf.log(
                 tf.clip_by_value(tf.reshape(self.g_predictions, [-1, self.num_emb]), 1e-20, 1.0)
