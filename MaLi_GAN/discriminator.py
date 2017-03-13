@@ -4,7 +4,7 @@ import numpy as np
 class Discriminator(object):
     def __init__(self, sequence_length, batch_size, n_classes, pretrained_embeddings):
         print "Initializing discriminator..."
-        self.batch_size = batch_size
+        self.batch_size = 2 * batch_size
         self.sequence_length = sequence_length
         self.n_classes = n_classes
         self.n_hidden = 150
@@ -17,7 +17,7 @@ class Discriminator(object):
 
     def add_placeholders(self):
         self.input_x = tf.placeholder(tf.int32, shape=[None, self.sequence_length])
-        self.input_y = tf.placeholder(tf.float32, shape=[None, 1])
+        self.input_y = tf.placeholder(tf.float32, shape=[None, 2])
         self.dropout_keep_prob = tf.placeholder(tf.float32, name="dropout_keep_prob")
 
     def add_embedding(self):
@@ -30,22 +30,20 @@ class Discriminator(object):
         # Hidden layer weights => 2*n_hidden because of forward + backward cells
         self.weights = tf.Variable(tf.random_normal([2*self.n_hidden, self.n_classes]))
         self.biases = tf.Variable(tf.random_normal([self.n_classes]))
-        self.theta = [self.weights, self.biases]
         
         self.cell_fw = tf.contrib.rnn.GRUCell(self.n_hidden)
         self.cell_bw = tf.contrib.rnn.GRUCell(self.n_hidden)
 
         with tf.variable_scope('preds'):
+            print self.sequence_length * np.ones(self.batch_size)
             outputs, output_states = tf.nn.bidirectional_dynamic_rnn(self.cell_fw, self.cell_bw, self.x, dtype=tf.float32, sequence_length=(self.sequence_length * np.ones(self.batch_size)))
             output_state = tf.concat(output_states, 1)
         
         preds = tf.matmul(output_state, self.weights) + self.biases
-        preds = tf.reduce_sum(tf.multiply(preds, self.input_y), 1)
+        print preds.get_shape()
         return preds
 
     def add_loss_op(self):
-        shape = self.input_y.get_shape()
-        self.preds = tf.expand_dims(self.preds, 1)
-        loss = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(labels=self.input_y, logits=self.preds))
+        loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(labels=self.input_y, logits=self.preds))
         # add regularization?
         return loss

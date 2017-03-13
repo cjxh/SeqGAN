@@ -1,13 +1,13 @@
 import tensorflow as tf
 import numpy as np
-import data_loader as dl
+from data_loader import DataLoader as dl
 from tqdm import tqdm
-# import generator
-import Discriminator
+from generator import Generator
+from discriminator import Discriminator
 # import evaluation
 
 # initialize constants
-T = 35
+T = 20
 N = T
 K = 5
 k = 5
@@ -19,7 +19,7 @@ n_classes = 2
 # populate the lexicon of existing words
 lexicon = {}
 counter = 0
-with open('word_lexicon.txt', 'r') as f:
+with open('data/word_lexicon.txt', 'r') as f:
     print "Pre-processing and saving word lexicon in memory..."
     for line in tqdm(f):
         for word in line:
@@ -34,7 +34,7 @@ positive_data = data_loader.load_data(positive_file)
 pretrained_embeddings = np.load('data/glove_vectors.npy')
 
 # initialize generator and discriminator
-gen = Generator()
+gen = Generator(len(pretrained_embeddings), batch_size, 300, 150, T, 0, 10)
 with tf.variable_scope('discriminator'):
     dis = Discriminator(N, batch_size, n_classes, pretrained_embeddings)
 dis_params = [param for param in tf.trainable_variables() if 'discriminator' in param.name]
@@ -48,22 +48,26 @@ sess.run(tf.global_variable_initializer())
 
 # pretrain 
 # generator.pretrain()
+for i in range(100):
+    gen.pretrain_one_epoch(data_loader)
 # discriminator.pretrain()
 for i in range(k):
     # minibatches of real training data ... do they mean 1 or all minibatches??
     real_minibatches = data_loader.mini_batch(batch_size)
     # minibatch, get first N from real_minibatch, generate the rest
-    gen_minibatch = generator.generate_from_latch(sess, real_minibatches, N)
-    dis_x_train = np.concat((real_minibatches, gen_minibatch), axis=1)
-    dis_y_train_real = np.ones(self.batch_size)
-    dis_y_train_fake = np.zeros(self.batch_size)
-    dis_y_train = np.concat((dis_y_train_real, dis_y_train_fake), axis=1)
+    gen_minibatches = generator.generate_from_latch(sess, real_minibatches, N)
+    dis_x_train = [np.concatenate((real_minibatches[i], gen_minibatches[i]), axis=0) for i in range(0, len(real_minibatches))]
+    
+    for batch in dis_x_train:
+        real = np.ones((batch_size,1))
+        fake = np.zeros((batch_size,1))
+        dis_y_real = np.concatenate((real, fake), axis=1)
+        dis_y_fake = np.concatenate((fake, real), axis=1)
+        dis_y_train = np.concatenate((dis_y_real, dis_y_fake), axis=0)
 
-    shuffle_idx = np.random.permutation(np.arange(2 * self.batch_size))
-    shuffled_x =  dis_x_train[shuffle_idx]
-    shuffled_y =  dis_y_train[shuffle_idx]
-    dis_batches = zip(shuffled_x, shuffled_y)
-    for batch in dis_batches:
+        shuffle_idx = np.random.permutation(np.arange(2 * batch_size))
+        shuffled_x =  batch[shuffle_idx]
+        shuffled_y =  dis_y_train[shuffle_idx]
         x_batch, y_batch = zip(*batch)
         feed = {
             discriminator.input_x: x_batch,
@@ -79,8 +83,18 @@ while N >= 0:
         real_minibatches = data_loader.mini_batch(batch_size)
         # minibatch, get first N from real_minibatch, generate the rest
         gen_minibatches = generator.generate_from_latch(sess, real_minibatches, N)
-        dis_batches = zip(real_minibatches, gen_minibatches)
-        for batch in dis_batches:
+        dis_x_train = [np.concatenate((real_minibatches[i], gen_minibatches[i]), axis=0) for i in range(0, len(real_minibatches))]
+        
+        for batch in dis_x_train:
+            real = np.ones((batch_size,1))
+            fake = np.zeros((batch_size,1))
+            dis_y_real = np.concatenate((real, fake), axis=1)
+            dis_y_fake = np.concatenate((fake, real), axis=1)
+            dis_y_train = np.concatenate((dis_y_real, dis_y_fake), axis=0)
+
+            shuffle_idx = np.random.permutation(np.arange(2 * batch_size))
+            shuffled_x =  batch[shuffle_idx]
+            shuffled_y =  dis_y_train[shuffle_idx]
             x_batch, y_batch = zip(*batch)
             feed = {
                 discriminator.input_x: x_batch,

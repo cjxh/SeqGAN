@@ -23,7 +23,9 @@ for i in range(k):
     dis_x_train = np.concatenate((real_minibatches, gen_minibatches), axis=0)
     real = np.ones((batch_size,1))
     fake = np.zeros((batch_size,1))
-    dis_y_train = np.concatenate((real, fake), axis=0)
+    dis_y_real = np.concatenate((real, fake), axis=1)
+    dis_y_fake = np.concatenate((fake, real), axis=1)
+    dis_y_train = np.concatenate((dis_y_real, dis_y_fake), axis=0)
 
     shuffle_idx = np.random.permutation(np.arange(2 * batch_size))
     shuffled_x =  dis_x_train[shuffle_idx]
@@ -34,4 +36,4 @@ for i in range(k):
         dis.input_y: shuffled_y,
         dis.dropout_keep_prob: DROPOUT_KEEP_PROB
     }
-    _ = sess.run([dis_train_op], feed)
+    _ = sess.run(dis_train_op, feed)
