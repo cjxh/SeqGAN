@@ -4,10 +4,10 @@ import numpy as np
 class Discriminator(object):
     def __init__(self, sequence_length, batch_size, n_classes, pretrained_embeddings):
         print "Initializing discriminator..."
-        self.batch_size = 2 * batch_size
+        self.batch_size = 2 *batch_size
         self.sequence_length = sequence_length
         self.n_classes = n_classes
-        self.n_hidden = 150
+        self.n_hidden = 10
         self.g_embeddings = pretrained_embeddings
 
         self.add_placeholders()
@@ -35,11 +35,16 @@ class Discriminator(object):
         self.cell_bw = tf.contrib.rnn.GRUCell(self.n_hidden)
 
         with tf.variable_scope('preds'):
-            outputs, output_states = tf.nn.bidirectional_dynamic_rnn(self.cell_fw, self.cell_bw, self.x, dtype=tf.float32, sequence_length=(self.sequence_length * np.ones(1)))
+            outputs, output_states = tf.nn.bidirectional_dynamic_rnn(self.cell_fw, self.cell_bw, self.x, dtype=tf.float32, sequence_length=(self.sequence_length * np.ones(self.batch_size)))
             output_state = tf.concat(output_states, 1)
         
         preds = tf.matmul(output_state, self.weights) + self.biases
+	self.outputs = tf.slice(tf.nn.softmax(preds), [0,1],[-1,-1])
         return preds
+
+    def get_predictions(self, sess, x_ij):
+	feed = {self.input_x: x_ij}
+	return sess.run(self.outputs, feed)
 
     def add_loss_op(self):
         loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(labels=self.input_y, logits=self.preds))

@@ -63,8 +63,8 @@ for i in tqdm(range(k)):
     # minibatches of real training data ... do they mean 1 or all minibatches??
     real_minibatches = data_loader.next_batch()
     # minibatch, get first N from real_minibatch, generate the rest
-    gen_minibatches = generator.generate_from_latch(sess, real_minibatches, N)
-    dis_x_train = [np.concatenate((real_minibatches[i], gen_minibatches[i]), axis=0) for i in range(0, len(real_minibatches))] 
+    gen_minibatches = gen.generate_from_latch(sess, real_minibatches, N)
+    dis_x_train = np.concatenate((real_minibatches, gen_minibatches), axis=0)
     real = np.ones((batch_size,1))
     fake = np.zeros((batch_size,1))
     dis_y_real = np.concatenate((real, fake), axis=1)
@@ -72,17 +72,15 @@ for i in tqdm(range(k)):
     dis_y_train = np.concatenate((dis_y_real, dis_y_fake), axis=0)
 
     shuffle_idx = np.random.permutation(np.arange(2 * batch_size))
-    shuffled_x =  batch[shuffle_idx]
+    shuffled_x =  dis_x_train[shuffle_idx]
     shuffled_y =  dis_y_train[shuffle_idx]
     
-    for batch in dis_x_train:
-        x_batch, y_batch = zip(*batch)
-        feed = {
-            discriminator.input_x: x_batch,
-            discriminator.input_y: y_batch,
-            discriminator.dropout_keep_prob: DROPOUT_KEEP_PROB
-        }
-        _, step = sess.run([dis_train_op, dis_global_step], feed)
+    feed = {
+        dis.input_x: shuffled_x,
+        dis.input_y: shuffled_y,
+        dis.dropout_keep_prob: DROPOUT_KEEP_PROB
+    }
+    _, step = sess.run([dis_train_op, dis_global_step], feed)
 
 while N >= 0:
     N = N - K
@@ -91,7 +89,7 @@ while N >= 0:
         real_minibatches = data_loader.next_batch()
         # minibatch, get first N from real_minibatch, generate the rest
         gen_minibatches = gen.generate_from_latch(sess, real_minibatches, N)
-        dis_x_train = [np.concatenate((real_minibatches[i], gen_minibatches[i]), axis=0) for i in range(0, len(real_minibatches))] 
+        dis_x_train = np.concatenate((real_minibatches, gen_minibatches), axis=0)
         real = np.ones((batch_size,1))
         fake = np.zeros((batch_size,1))
         dis_y_real = np.concatenate((real, fake), axis=1)
@@ -99,19 +97,17 @@ while N >= 0:
         dis_y_train = np.concatenate((dis_y_real, dis_y_fake), axis=0)
 
         shuffle_idx = np.random.permutation(np.arange(2 * batch_size))
-        shuffled_x =  batch[shuffle_idx]
+        shuffled_x =  dis_x_train[shuffle_idx]
         shuffled_y =  dis_y_train[shuffle_idx]
-        
-        for batch in dis_x_train:
-            x_batch, y_batch = zip(*batch)
-            feed = {
-                discriminator.input_x: x_batch,
-                discriminator.input_y: y_batch,
-                discriminator.dropout_keep_prob: DROPOUT_KEEP_PROB
-            }
-            _, step = sess.run([dis_train_op, dis_global_step], feed)
+    
+        feed = {
+            dis.input_x: shuffled_x,
+            dis.input_y: shuffled_y,
+            dis.dropout_keep_prob: DROPOUT_KEEP_PROB
+        }
+        _, step = sess.run([dis_train_op, dis_global_step], feed)
     
     # minibatch of real training data
-    new_minibatch = real_data_loader.mini_batch(positive_file)
-    x_ij = generator.generate_from_latch(new_minibatch, N)
-    generator.update_params()
+    new_minibatch = data_loader.next_batch()
+    x_ij = gen.generate_from_latch(sess, new_minibatch, N)
+    gen.train_one_step(sess, dis, x_ij)

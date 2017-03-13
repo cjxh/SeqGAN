@@ -73,8 +73,8 @@ class Generator(object):
         outputs = sess.run([self.x_ij], feed)
         return outputs[0] # batch_size x m x seqlen
 
-    def train_one_step(self, dis, xij):
-        rewards = RD(dis.get_predictions(xij))
+    def train_one_step(self, sess, dis, xij):
+        rewards = self.RD(dis.get_predictions(sess, xij))
         rewards = np.reshape(rewards, (self.batch_size, self.m))
         norm_rewards = (rewards / np.sum(rewards, axis=1)) - self.baseline
         rewards = np.reshape(norm_rewards, (self.batch_size * self.m))
