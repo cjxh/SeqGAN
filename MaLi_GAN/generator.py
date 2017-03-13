@@ -13,6 +13,7 @@ class Generator(object):
         self.emb_dim = emb_dim
         self.learning_rate = learning_rate
         self.m = m
+        self.baseline = 0
 
         self.start_token = tf.constant([start_token] * self.batch_size, dtype=tf.int32)
         self.g_embeddings = tf.get_variable('g_embeddings', initializer=self.init_matrix([self.num_emb, self.emb_dim]))
@@ -31,6 +32,9 @@ class Generator(object):
         # pretraining functions
         self.add_pretrain_loss_op()
         self.add_pretrain_op()
+
+        # maligan functions
+        self.add_train_op()
         
     ###### Client functions ###################################################################
     def pretrain_one_step(self, sess, input_x):
@@ -61,10 +65,18 @@ class Generator(object):
         outputs = sess.run([self.gen_x], feed)
         return outputs[0] # batch size x seqlen
 
-    def generate_x_ij(self, sess, input_x, N):
+    def generate_xij(self, sess, input_x, N):
         feed = {self.x: input_x, self.given_num: N}
         outputs = sess.run([self.x_ij], feed)
         return outputs[0] # batch_size x m x seqlen
+
+    def train_one_step(self, dis, xij):
+        rewards = RD(dis.get_predictions(xij))
+        rewards = np.reshape(rewards, (self.batch_size, self.m))
+        norm_rewards = (rewards / np.sum(rewards, axis=1)) - self.baseline
+        rewards = np.reshape(norm_rewards, (self.batch_size * self.m))
+        feed = {self.x_ij: xij, self.rewards: rewards}
+        return sess.run([self.train_loss], feed)
 
     ############################################################################################
 
@@ -72,25 +84,43 @@ class Generator(object):
 
 
     ########## graph building ########################################
+    def RD(reward):
+        return reward / (1-reward)
+
+    def add_train_op(self):
+        contrib = tf.reduce_sum(tf.one_hot(tf.to_int32(self.x_ij), self.num_emb, 1.0, 0.0) * \
+            tf.log(tf.clip_by_value(self.preds_ijs, 1e-20, 1.0)), 2)
+        masked = tf.slice(contrib, [0, self.given_num], [-1, -1])
+        self.train_loss = tf.reduce_sum(tf.reduce_sum(masked, 1) * self.rewards)
+
     def build_xij(self):
         x_ij = tensor_array_ops.TensorArray(
             dtype=tf.int32, size=self.m, dynamic_size=False, infer_shape=True, clear_after_read=False)
+        preds_ijs = tensor_array_ops.TensorArray(
+            dtype=tf.float32, size=self.m, dynamic_size=False, infer_shape=True, clear_after_read=False)
 
-        def body_(i, x_ij):
+        def body_(i, x_ij, preds_ijs):
             x_ij = x_ij.write(i, self.build_latch_rnn())
-            return i + 1, x_ij
+            preds_ijs = preds_ijs.write(i, self.build_pretrain())
+            return i + 1, x_ij, preds_ijs
 
-        _, x_ij = control_flow_ops.while_loop(
-            cond=lambda i, _: i < self.m,
+        _, x_ij, preds_ijs = control_flow_ops.while_loop(
+            cond=lambda i, _1, _2: i < self.m,
             body=body_, 
-            loop_vars=(tf.constant(0, dtype=tf.int32), x_ij))
+            loop_vars=(tf.constant(0, dtype=tf.int32), x_ij, preds_ijs))
 
         x_ij = x_ij.pack() # m x batch_size x seq len
         self.x_ij = tf.transpose(x_ij, perm=[1, 0, 2]) # batch_size x m x seqlen
+        self.x_ij = tf.reshape(self.x_ij, [self.batch_size * self.m, self.sequence_length])
+
+        preds_ijs = preds_ijs.pack()
+        preds_ijs = tf.transpose(preds_ijs, perm=[1, 0, 2, 3])
+        self.preds_ijs = tf.reshape(preds_ijs, [self.batch_size * self.m, self.sequence_length, self.num_emb])
 
     def add_placeholders(self):
         self.x = tf.placeholder(tf.int32, shape=[self.batch_size, self.sequence_length])
         self.given_num = tf.placeholder(tf.int32)
+        self.rewards = tf.placeholder(tf.float32, shape=[self.m * self.batch_size])
 
     def add_pretrain_op(self):
         optimizer = tf.train.GradientDescentOptimizer(learning_rate=self.learning_rate)

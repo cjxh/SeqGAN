@@ -19,10 +19,11 @@ data = np.array([[1,3,2,1,1],
 #loss = generator.pretrain_one_step(sess, pretrain_data)
 # print loss
 
-result = generator.generate_x_ij(sess, data, 2)
+result = generator.generate_xij(sess, data, 2)
 #result = generator.generate(sess)
 
 print result
+
 
 # self.U = tf.get_variable('U_output', shape=[self.hidden_size, self.vocab_size], \
 #             initializer=tf.contrib.layers.xavier_initializer())
