@@ -34,8 +34,7 @@ positive_data = data_loader.load_data(positive_file)
 pretrained_embeddings = np.load('data/glove_vectors.npy')
 
 # initialize generator and discriminator
-with tf.variable_scope('generator'):
-    gen = Generator()
+gen = Generator()
 with tf.variable_scope('discriminator'):
     dis = Discriminator(N, batch_size, n_classes, pretrained_embeddings)
 dis_params = [param for param in tf.trainable_variables() if 'discriminator' in param.name]
@@ -47,17 +46,23 @@ dis_train_op = dis_optimizer.apply_gradients(dis_grads_and_vars, global_step=dis
 sess = tf.Session()
 sess.run(tf.global_variable_initializer())
 
-# pretrain generator
-for i in range(10):
-    gen.pretrain_one_epoch(sess, data_loader)
-
-#pretrain discriminator
+# pretrain 
+# generator.pretrain()
+# discriminator.pretrain()
 for i in range(k):
     # minibatches of real training data ... do they mean 1 or all minibatches??
     real_minibatches = data_loader.mini_batch(batch_size)
     # minibatch, get first N from real_minibatch, generate the rest
     gen_minibatch = generator.generate_from_latch(sess, real_minibatches, N)
-    dis_batches = zip(dis_x_train, dis_y_train)
+    dis_x_train = np.concat((real_minibatches, gen_minibatch), axis=1)
+    dis_y_train_real = np.ones(self.batch_size)
+    dis_y_train_fake = np.zeros(self.batch_size)
+    dis_y_train = np.concat((dis_y_train_real, dis_y_train_fake), axis=1)
+
+    shuffle_idx = np.random.permutation(np.arange(2 * self.batch_size))
+    shuffled_x =  dis_x_train[shuffle_idx]
+    shuffled_y =  dis_y_train[shuffle_idx]
+    dis_batches = zip(shuffled_x, shuffled_y)
     for batch in dis_batches:
         x_batch, y_batch = zip(*batch)
         feed = {
@@ -67,8 +72,6 @@ for i in range(k):
         }
         _, step = sess.run([dis_train_op, dis_global_step], feed)
 
-
-# run algorithm
 while N >= 0:
     N = N - K
     for i in range(k):
@@ -88,5 +91,5 @@ while N >= 0:
     
     # minibatch of real training data
     new_minibatch = real_data_loader.mini_batch(positive_file)
-    x_ij = generator.generate_x_ij(sess, new_minibatch, N, m)
+    x_ij = generator.generate_from_latch(new_minibatch, N)
     generator.update_params()
