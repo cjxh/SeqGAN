@@ -70,17 +70,17 @@ class Generator(object):
 
     def generate_xij(self, sess, input_x, N):
         feed = {self.x: input_x, self.given_num: N}
-        outputs = sess.run([self.xij_calc, self.predsijs_calc], feed)
-        return outputs[0], outputs[1] # xij, predsijs
+        outputs = sess.run([self.xij_calc], feed)
+        return outputs[0]
 
-    def train_one_step(self, sess, dis, xij, predsijs, N):
+    def train_one_step(self, sess, dis, xij, N):
         rewards = self.RD(dis.get_predictions(sess, xij))
         rewards = np.reshape(rewards, (self.batch_size, self.m))
         denom = np.sum(rewards, axis=1)
         denom = denom.reshape((np.shape(denom)[0], 1))
         norm_rewards = np.divide(rewards, denom) #- self.baseline
         rewards = np.reshape(norm_rewards, (self.batch_size * self.m))
-        feed = {self.xij: xij, self.predsijs: predsijs, self.rewards: rewards, self.given_num: N}
+        feed = {self.xij: xij, self.rewards: rewards, self.given_num: N}
         return sess.run([self.train_op], feed)
 
     ############################################################################################
@@ -92,7 +92,7 @@ class Generator(object):
 
     def add_train_loss(self):
         contrib = tf.reduce_sum(tf.one_hot(tf.to_int32(self.xij), self.num_emb, 1.0, 0.0) * \
-            tf.log(tf.clip_by_value(self.predsijs, 1e-20, 1.0)), 2)
+            tf.log(tf.clip_by_value(self.predsijs_calc, 1e-20, 1.0)), 2)
         masked = tf.slice(contrib, [0, self.given_num], [-1, -1])
         self.train_loss = tf.reduce_sum(tf.reduce_sum(masked, 1) * self.rewards)
 
@@ -125,7 +125,6 @@ class Generator(object):
         self.given_num = tf.placeholder(tf.int32)
         self.rewards = tf.placeholder(tf.float32, shape=[self.m * self.batch_size])
         self.xij = tf.placeholder(tf.int32, shape=[self.batch_size * self.m, self.sequence_length])
-        self.predsijs = tf.placeholder(tf.float32, shape=[self.batch_size * self.m, self.sequence_length, self.num_emb])
 
     def add_train_op(self, loss):
         optimizer = tf.train.GradientDescentOptimizer(learning_rate=self.learning_rate)
