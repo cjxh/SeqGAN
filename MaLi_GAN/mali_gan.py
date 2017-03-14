@@ -81,7 +81,7 @@ for i in tqdm(range(k)):
     }
     _ = sess.run(dis_train_op, feed)
 
-while N >= 0:
+while N - K >= 0:
     N = N - K
     for i in range(k):
         # minibatches of real training data ... do they mean 1 or all minibatches??

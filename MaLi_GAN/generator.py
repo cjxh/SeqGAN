@@ -83,7 +83,7 @@ class Generator(object):
         denom = denom.reshape((np.shape(denom)[0], 1))
         norm_rewards = np.divide(rewards, denom) #- self.baseline
         rewards = np.reshape(norm_rewards, (-1))
-        feed = {self.x: x, self.rewards: rewards, self.given_num: N}
+        feed = {self.x: xij, self.rewards: rewards, self.given_num: N}
         outputs = sess.run([self.train_op], feed)
         return outputs[0]
 
@@ -141,7 +141,7 @@ class Generator(object):
     def add_placeholders(self):
         self.x = tf.placeholder(tf.int32, shape=[None, self.sequence_length])
         self.given_num = tf.placeholder(tf.int32)
-        self.rewards = tf.placeholder(tf.float32, shape=[None, self.m])
+        self.rewards = tf.placeholder(tf.float32, shape=[None, ])
 
     def add_train_op(self, loss):
         optimizer = tf.train.GradientDescentOptimizer(learning_rate=self.learning_rate)
