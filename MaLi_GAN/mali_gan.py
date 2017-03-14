@@ -33,31 +33,53 @@ positive_file = 'save/real_data.txt'
 data_loader = dl(lexicon, N, batch_size)
 print "Loading data from " + positive_file + " into memory..."
 positive_data = data_loader.load_data(positive_file)
-'''
-pretrained_embeddings = np.load('data/glove_vectors.npy')
-'''
+#pretrained_embeddings = np.load('data/glove_vectors.npy')
+
+
 pretrained_embeddings = tf.get_variable('embeddings', initializer=tf.random_normal([5000, 300]))
 
 # initialize generator and discriminator
+target_params = cPickle.load(open('save/target_params.pkl'))
+target_lstm = TARGET_LSTM(5000, 64, 32, 32, 20, 0, target_params)   
+def target_loss(sess, target_lstm, generator, batch_size):
+    for it in xrange(data_loader.num_batch):
+        g_loss = sess.run(target_lstm.pretrain_loss, {target_lstm.x: generator.generate(sess, batch_size)})
+        supervised_g_losses.append(g_loss)
+
+    return np.mean(supervised_g_losses)
+
+# def generate_samples_to_file(sess, generator, generated_num, output_file):
+#     #  Generated Samples
+#     generated_samples = generator.generate(sess, generated_num)
+
+#     with open(output_file, 'w') as fout:
+#         for poem in generated_samples:
+#             buffer = ' '.join([str(x) for x in poem]) + '\n'
+#             # buffer = u''.join([words[x] for x in poem]).encode('utf-8') + '\n'
+#             fout.write(buffer)
+
 with tf.variable_scope('generator'):
     gen = Generator(5000, batch_size, 300, 150, T, 0, 20, pretrained_embeddings)
 with tf.variable_scope('discriminator'):
     dis = Discriminator(N, batch_size, n_classes, pretrained_embeddings)
+
+
 dis_params = [param for param in tf.trainable_variables() if 'discriminator' in param.name]
 dis_optimizer = tf.train.AdamOptimizer(1e-4)
 dis_grads_and_vars = dis_optimizer.compute_gradients(dis.loss, dis_params)
 dis_train_op = dis_optimizer.apply_gradients(dis_grads_and_vars)
 
 sess = tf.Session()
-init = tf.global_variables_initializer()
-sess.run(init)
-# sess.run(tf.global_variables_initializer())
+sess.run(tf.global_variables_initializer())
 
 # pretrain 
-# generator.pretrain()
 for i in range(5):
-    print gen.pretrain_one_epoch(sess, data_loader)
-# discriminator.pretrain()
+    epoch_loss = gen.pretrain_one_epoch(sess, data_loader)
+    print epoch_loss
+    tloss = target_loss(sess, target_lstm, gen, 64)
+    print 'tloss: ' + str(tloss)
+
+
 for i in tqdm(range(k)):
     # minibatches of real training data ... do they mean 1 or all minibatches??
     real_minibatches = data_loader.next_batch()
