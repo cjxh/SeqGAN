@@ -36,7 +36,7 @@ positive_data = data_loader.load_data(positive_file)
 '''
 pretrained_embeddings = np.load('data/glove_vectors.npy')
 '''
-pretrained_embeddings = tf.random_normal([5000, 300])
+pretrained_embeddings = tf.get_variable('embeddings', initializer=tf.random_normal([5000, 300]))
 
 # initialize generator and discriminator
 with tf.variable_scope('generator'):
@@ -111,4 +111,4 @@ while N - K >= 0:
     # minibatch of real training data
     new_minibatch = data_loader.next_batch()
     xij = gen.generate_xij(sess, new_minibatch, N)
-    print gen.train_one_step(sess, dis, xij,  N)
+    print gen.train_one_step(sess, dis, xij,  N) / (T-N)

@@ -16,7 +16,6 @@ class Generator(object):
         self.m = m
         self.baseline = 0
 
-        #self.g_embeddings = pretrained_embeddings #tf.get_variable('g_embeddings', initializer=self.init_matrix([self.num_emb, self.emb_dim]))
         self.g_embeddings = pretrained_embeddings
         
         self.g_recurrent_unit = self.create_recurrent_unit()  # maps h_tm1 to h_t for generator
@@ -38,7 +37,7 @@ class Generator(object):
 
         # maligan functions
         self.add_train_loss()
-        self.train_op = self.add_train_op(self.train_loss, .001)
+        self.train_op = self.add_train_op(self.train_loss, .1)
         
     ###### Client functions ###################################################################
     def pretrain_one_step(self, sess, input_x):

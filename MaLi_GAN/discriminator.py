@@ -22,8 +22,8 @@ class Discriminator(object):
         self.dropout_keep_prob = tf.placeholder(tf.float32, name="dropout_keep_prob")
 
     def add_embedding(self):
-        embeddings = tf.Variable(self.g_embeddings)
-        embeddings = tf.nn.embedding_lookup(embeddings, self.input_x)
+        #embeddings = tf.Variable(self.g_embeddings)
+        embeddings = tf.nn.embedding_lookup(self.g_embeddings, self.input_x)
         return tf.cast(embeddings, tf.float32)
     
     def build(self):
