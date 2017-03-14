@@ -3,9 +3,11 @@ from lstm import LSTM
 import tensorflow as tf 
 import numpy as np
 
+pretrained_embeddings = tf.random_normal([4, 6])
+
 #num_emb, batch_size, emb_dim, hidden_dim, sequence_length, start_token,
 with tf.variable_scope('generator'):
-	generator = Generator(4, 3, 6, 7, 5, 0, 4)
+	generator = Generator(4, 3, 6, 7, 5, 0, 4, pretrained_embeddings)
 
 # generator = LSTM(4, 3, 7, 6, 5, 0)
 
@@ -19,8 +21,9 @@ data = np.array([[1,3,2,1,1],
 #loss = generator.pretrain_one_step(sess, pretrain_data)
 # print loss
 
-result = generator.generate_xij(sess, data, 2)
-#result = generator.generate(sess)
+#result = generator.generate_xij(sess, data, 2)
+#result = generator.generate_from_latch(sess, data, 2)
+result = generator.generate(sess, 10)
 
 print result
 
