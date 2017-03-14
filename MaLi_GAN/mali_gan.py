@@ -9,7 +9,7 @@ from discriminator import Discriminator
 # initialize constants
 T = 20
 N = T
-K = 5
+K = 1
 k = 5
 DROPOUT_KEEP_PROB = 0.75
 batch_size = 32
@@ -40,7 +40,7 @@ pretrained_embeddings = tf.random_normal([5000, 300])
 
 # initialize generator and discriminator
 with tf.variable_scope('generator'):
-    gen = Generator(5000, batch_size, 300, 150, T, 0, 2, pretrained_embeddings)
+    gen = Generator(5000, batch_size, 300, 150, T, 0, 20, pretrained_embeddings)
 with tf.variable_scope('discriminator'):
     dis = Discriminator(N, batch_size, n_classes, pretrained_embeddings)
 dis_params = [param for param in tf.trainable_variables() if 'discriminator' in param.name]
@@ -109,4 +109,4 @@ while N - K >= 0:
     # minibatch of real training data
     new_minibatch = data_loader.next_batch()
     xij = gen.generate_xij(sess, new_minibatch, N)
-    gen.train_one_step(sess, dis, xij,  N)
+    print gen.train_one_step(sess, dis, xij,  N)

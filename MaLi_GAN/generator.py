@@ -83,8 +83,8 @@ class Generator(object):
         norm_rewards = np.divide(rewards, denom) #- self.baseline
         rewards = np.reshape(norm_rewards, (-1))
         feed = {self.x: xij, self.rewards: rewards, self.given_num: N}
-        outputs = sess.run([self.train_op], feed)
-        return outputs[0]
+        outputs = sess.run([self.train_op, self.train_loss], feed)
+        return outputs[1]
 
     ############################################################################################
 
@@ -97,7 +97,7 @@ class Generator(object):
         contrib = tf.reduce_sum(tf.one_hot(tf.to_int32(self.x), self.num_emb, 1.0, 0.0) * \
             tf.log(tf.clip_by_value(self.g_predictions, 1e-20, 1.0)), 2)
         masked = tf.slice(contrib, [0, self.given_num], [-1, -1])
-        self.train_loss = tf.reduce_sum(tf.reduce_sum(masked, 1) * self.rewards)
+        self.train_loss = -tf.reduce_sum(tf.reduce_sum(masked, 1) * self.rewards)
 
     def add_placeholders(self):
         self.x = tf.placeholder(tf.int32, shape=[None, self.sequence_length])
