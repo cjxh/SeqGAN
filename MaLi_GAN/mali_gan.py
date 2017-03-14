@@ -44,10 +44,9 @@ with tf.variable_scope('generator'):
 with tf.variable_scope('discriminator'):
     dis = Discriminator(N, batch_size, n_classes, pretrained_embeddings)
 dis_params = [param for param in tf.trainable_variables() if 'discriminator' in param.name]
-dis_global_step = tf.Variable(0, name="global_step", trainable=False)
 dis_optimizer = tf.train.AdamOptimizer(1e-4)
 dis_grads_and_vars = dis_optimizer.compute_gradients(dis.loss, dis_params)
-dis_train_op = dis_optimizer.apply_gradients(dis_grads_and_vars, global_step=dis_global_step)
+dis_train_op = dis_optimizer.apply_gradients(dis_grads_and_vars)
 
 sess = tf.Session()
 init = tf.global_variables_initializer()
@@ -70,7 +69,6 @@ for i in tqdm(range(k)):
     dis_y_real = np.concatenate((real, fake), axis=1)
     dis_y_fake = np.concatenate((fake, real), axis=1)
     dis_y_train = np.concatenate((dis_y_real, dis_y_fake), axis=0)
-    print "length of inputs: " + str(len(dis_x_train))
 
     shuffle_idx = np.random.permutation(np.arange(2 * batch_size))
     shuffled_x =  dis_x_train[shuffle_idx]
@@ -81,7 +79,7 @@ for i in tqdm(range(k)):
         dis.input_y: shuffled_y,
         dis.dropout_keep_prob: DROPOUT_KEEP_PROB
     }
-    _, step = sess.run([dis_train_op, dis_global_step], feed)
+    _ = sess.run(dis_train_op, feed)
 
 while N >= 0:
     N = N - K
@@ -106,7 +104,7 @@ while N >= 0:
             dis.input_y: shuffled_y,
             dis.dropout_keep_prob: DROPOUT_KEEP_PROB
         }
-        _, step = sess.run([dis_train_op, dis_global_step], feed)
+        _ = sess.run(dis_train_op, feed)
     
     # minibatch of real training data
     new_minibatch = data_loader.next_batch()

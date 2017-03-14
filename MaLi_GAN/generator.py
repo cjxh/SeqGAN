@@ -76,9 +76,7 @@ class Generator(object):
     def train_one_step(self, sess, dis, xij):
         rewards = self.RD(dis.get_predictions(sess, xij))
         rewards = np.reshape(rewards, (self.batch_size, self.m))
-        print np.shape(rewards)
         denom = np.sum(rewards, axis=1)
-        print np.shape(denom)
         denom = denom.reshape((np.shape(denom)[0], 1))
         norm_rewards = np.divide(rewards, denom) #- self.baseline
         rewards = np.reshape(norm_rewards, (self.batch_size * self.m))
