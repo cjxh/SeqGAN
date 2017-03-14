@@ -36,7 +36,7 @@ class Generator(object):
         self.pretrain_op = self.add_train_op(self.pretrain_loss)
 
         # maligan functions
-        self.add_train_loss()
+        #self.add_train_loss()
         self.train_op = self.add_train_op(self.train_loss)
         
     ###### Client functions ###################################################################
@@ -79,7 +79,7 @@ class Generator(object):
         denom = np.sum(rewards, axis=1)
         denom = denom.reshape((np.shape(denom)[0], 1))
         norm_rewards = np.divide(rewards, denom) #- self.baseline
-        rewards = np.reshape(norm_rewards, (self.batch_size * self.m))
+        #rewards = np.reshape(norm_rewards, (self.batch_size * self.m))
         feed = {self.xij: xij, self.rewards: rewards, self.given_num: N}
         return sess.run([self.train_op], feed)
 
@@ -99,31 +99,43 @@ class Generator(object):
     def build_xij(self):
         xij = tensor_array_ops.TensorArray(
             dtype=tf.int32, size=self.m, dynamic_size=False, infer_shape=True, clear_after_read=False)
-        predsijs = tensor_array_ops.TensorArray(
+        probsijs = tensor_array_ops.TensorArray(
+            dtype=tf.float32, size=self.m, dynamic_size=False, infer_shape=True, clear_after_read=False)
+        losses = tensor_array_ops.TensorArray(
             dtype=tf.float32, size=self.m, dynamic_size=False, infer_shape=True, clear_after_read=False)
 
-        def body_(i, xij, predsijs):
-            xij = xij.write(i, self.build_latch_rnn())
-            predsijs = predsijs.write(i, self.build_pretrain())
-            return i + 1, xij, predsijs
+        def body_(i, xij, probsijs, losses):
+            sentences = self.build_latch_rnn()
+            probs = self.build_pretrain()
+            xij = xij.write(i, sentences)
+            probsijs = probsijs.write(i, probs)
+            contrib = tf.reduce_sum(tf.one_hot(tf.to_int32(sentences), self.num_emb, 1.0, 0.0) * \
+                tf.log(tf.clip_by_value(probs, 1e-20, 1.0)), 2)
+            masked = tf.slice(contrib, [0, self.given_num], [-1, -1])
+            losses.write(i, tf.reduce_sum(tf.reduce_sum(tf.reduce_sum(masked, 1) * tf.slice(self.rewards, [0, i], [-1, 1]))))
 
-        _, xij, predsijs = control_flow_ops.while_loop(
-            cond=lambda i, _1, _2: i < self.m,
+            return i + 1, xij, probsijs, losses
+
+        _, xij, probsijs, losses = control_flow_ops.while_loop(
+            cond=lambda i, _1, _2, _3: i < self.m,
             body=body_, 
-            loop_vars=(tf.constant(0, dtype=tf.int32), xij, predsijs))
+            loop_vars=(tf.constant(0, dtype=tf.int32), xij, probsijs, losses))
 
         xij = xij.stack() # m x batch_size x seq len
         xij = tf.transpose(xij, perm=[1, 0, 2]) # batch_size x m x seqlen
         self.xij_calc = tf.reshape(xij, [self.batch_size * self.m, self.sequence_length])
 
-        predsijs = predsijs.stack()
-        predsijs = tf.transpose(predsijs, perm=[1, 0, 2, 3])
-        self.predsijs_calc = tf.reshape(predsijs, [self.batch_size * self.m, self.sequence_length, self.num_emb])
+        probsijs = probsijs.stack()
+        probsijs = tf.transpose(probsijs, perm=[1, 0, 2, 3])
+        self.probsijs_calc = tf.reshape(probsijs, [self.batch_size * self.m, self.sequence_length, self.num_emb])
+
+        losses = losses.stack()
+        self.train_loss = tf.reduce_sum(losses)
 
     def add_placeholders(self):
         self.x = tf.placeholder(tf.int32, shape=[self.batch_size, self.sequence_length])
         self.given_num = tf.placeholder(tf.int32)
-        self.rewards = tf.placeholder(tf.float32, shape=[self.m * self.batch_size])
+        self.rewards = tf.placeholder(tf.float32, shape=[self.batch_size, self.m])
         self.xij = tf.placeholder(tf.int32, shape=[self.batch_size * self.m, self.sequence_length])
 
     def add_train_op(self, loss):
