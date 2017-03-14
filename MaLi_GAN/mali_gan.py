@@ -40,7 +40,7 @@ pretrained_embeddings = tf.random_normal([5000, 300])
 
 # initialize generator and discriminator
 with tf.variable_scope('generator'):
-    gen = Generator(5000, batch_size, 300, 150, T, 0, 10, pretrained_embeddings)
+    gen = Generator(5000, batch_size, 300, 150, T, 0, 2, pretrained_embeddings)
 with tf.variable_scope('discriminator'):
     dis = Discriminator(N, batch_size, n_classes, pretrained_embeddings)
 dis_params = [param for param in tf.trainable_variables() if 'discriminator' in param.name]
@@ -70,6 +70,7 @@ for i in tqdm(range(k)):
     dis_y_real = np.concatenate((real, fake), axis=1)
     dis_y_fake = np.concatenate((fake, real), axis=1)
     dis_y_train = np.concatenate((dis_y_real, dis_y_fake), axis=0)
+    print "length of inputs: " + str(len(dis_x_train))
 
     shuffle_idx = np.random.permutation(np.arange(2 * batch_size))
     shuffled_x =  dis_x_train[shuffle_idx]
@@ -109,5 +110,5 @@ while N >= 0:
     
     # minibatch of real training data
     new_minibatch = data_loader.next_batch()
-    x_ij = gen.generate_from_latch(sess, new_minibatch, N)
+    x_ij = gen.generate_xij(sess, new_minibatch, N)
     gen.train_one_step(sess, dis, x_ij)
