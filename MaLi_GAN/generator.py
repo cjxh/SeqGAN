@@ -73,14 +73,14 @@ class Generator(object):
         outputs = sess.run([self.xij_calc, self.predsijs_calc], feed)
         return outputs[0], outputs[1] # xij, predsijs
 
-    def train_one_step(self, sess, dis, xij, predsijs):
+    def train_one_step(self, sess, dis, xij, predsijs, N):
         rewards = self.RD(dis.get_predictions(sess, xij))
         rewards = np.reshape(rewards, (self.batch_size, self.m))
         denom = np.sum(rewards, axis=1)
         denom = denom.reshape((np.shape(denom)[0], 1))
         norm_rewards = np.divide(rewards, denom) #- self.baseline
         rewards = np.reshape(norm_rewards, (self.batch_size * self.m))
-        feed = {self.xij: xij, self.predsijs: predsijs, self.rewards: rewards}
+        feed = {self.xij: xij, self.predsijs: predsijs, self.rewards: rewards, self.given_num: N}
         return sess.run([self.train_op], feed)
 
     ############################################################################################
@@ -114,7 +114,7 @@ class Generator(object):
 
         xij = xij.stack() # m x batch_size x seq len
         xij = tf.transpose(xij, perm=[1, 0, 2]) # batch_size x m x seqlen
-        self.xij_calc = tf.reshape(self.xij, [self.batch_size * self.m, self.sequence_length])
+        self.xij_calc = tf.reshape(xij, [self.batch_size * self.m, self.sequence_length])
 
         predsijs = predsijs.stack()
         predsijs = tf.transpose(predsijs, perm=[1, 0, 2, 3])
@@ -130,7 +130,7 @@ class Generator(object):
     def add_train_op(self, loss):
         optimizer = tf.train.GradientDescentOptimizer(learning_rate=self.learning_rate)
 
-        grads_and_vars = optimizer.compute_gradients(self.pretrain_loss)
+        grads_and_vars = optimizer.compute_gradients(loss)
         grads_and_vars = zip(*grads_and_vars)
         gradients = grads_and_vars[0]
         variables = grads_and_vars[1]
