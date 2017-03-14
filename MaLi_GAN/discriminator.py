@@ -36,12 +36,13 @@ class Discriminator(object):
         self.cell_bw = tf.contrib.rnn.GRUCell(self.n_hidden)
 
         with tf.variable_scope('preds'):
-            outputs, output_states = tf.nn.bidirectional_dynamic_rnn(self.cell_fw, self.cell_bw, self.x, dtype=tf.float32, sequence_length=(self.sequence_length * np.ones(self.batch_size)))
+            seqlen = tf.fill(tf.expand_dims(tf.shape(self.input_x)[0], 0), tf.constant(self.sequence_length, dtype=tf.int32))
+            outputs, output_states = tf.nn.bidirectional_dynamic_rnn(self.cell_fw, self.cell_bw, self.x, dtype=tf.float32, sequence_length=seqlen)
             print self.sequence_length * np.ones(self.batch_size)
             output_state = tf.concat(output_states, 1)
         
         preds = tf.matmul(output_state, self.weights) + self.biases
-	self.outputs = tf.slice(tf.nn.softmax(preds), [0,1],[-1,-1])
+        self.outputs = tf.slice(tf.nn.softmax(preds), [0,1],[-1,-1])
         return preds
 
     def get_predictions(self, sess, x_ij):
