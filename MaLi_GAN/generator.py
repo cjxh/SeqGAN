@@ -80,7 +80,7 @@ class Generator(object):
         denom = denom.reshape((np.shape(denom)[0], 1))
         norm_rewards = np.divide(rewards, denom) #- self.baseline
         rewards = np.reshape(norm_rewards, (self.batch_size * self.m))
-        feed = {self.x_ij: xij, self.rewards: rewards}
+        feed = {self.x: xij, self.rewards: rewards}
         return sess.run([self.train_op], feed)
 
     ############################################################################################
