@@ -108,5 +108,5 @@ while N >= 0:
     
     # minibatch of real training data
     new_minibatch = data_loader.next_batch()
-    x_ij = gen.generate_xij(sess, new_minibatch, N)
-    gen.train_one_step(sess, dis, x_ij)
+    xij, predsijs = gen.generate_xij(sess, new_minibatch, N)
+    gen.train_one_step(sess, dis, xij, predsijs)
