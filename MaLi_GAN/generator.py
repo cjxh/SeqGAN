@@ -34,11 +34,11 @@ class Generator(object):
 
         # pretraining functions
         self.add_pretrain_loss()
-        self.pretrain_op = self.add_train_op(self.pretrain_loss)
+        self.pretrain_op = self.add_train_op(self.pretrain_loss, .1)
 
         # maligan functions
         self.add_train_loss()
-        self.train_op = self.add_train_op(self.train_loss)
+        self.train_op = self.add_train_op(self.train_loss, .001)
         
     ###### Client functions ###################################################################
     def pretrain_one_step(self, sess, input_x):
@@ -51,7 +51,7 @@ class Generator(object):
         supervised_g_losses = []
         data_loader.reset_pointer()
 
-        for it in tqdm(xrange(data_loader.num_batch)):
+        for it in xrange(data_loader.num_batch):
             batch = data_loader.next_batch()
             g_loss = self.pretrain_one_step(sess, batch)
             supervised_g_losses.append(g_loss)
@@ -104,15 +104,15 @@ class Generator(object):
         self.given_num = tf.placeholder(tf.int32)
         self.rewards = tf.placeholder(tf.float32, shape=[None, ])
 
-    def add_train_op(self, loss):
-        optimizer = tf.train.GradientDescentOptimizer(learning_rate=self.learning_rate)
-
-        grads_and_vars = optimizer.compute_gradients(loss)
+    def add_train_op(self, loss, lr):
+        optimizer = tf.train.GradientDescentOptimizer(lr)
+        return optimizer.minimize(loss)
+        '''grads_and_vars = optimizer.compute_gradients(loss)
         grads_and_vars = zip(*grads_and_vars)
         gradients = grads_and_vars[0]
         variables = grads_and_vars[1]
         gradients, global_norm = tf.clip_by_global_norm(gradients, 5.0)
-        return optimizer.apply_gradients(zip(gradients, variables))
+        return optimizer.apply_gradients(zip(gradients, variables))'''
 
     def add_pretrain_loss(self):
         self.pretrain_loss = -tf.reduce_sum(

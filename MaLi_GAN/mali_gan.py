@@ -55,8 +55,8 @@ sess.run(init)
 
 # pretrain 
 # generator.pretrain()
-for i in range(1):
-    gen.pretrain_one_epoch(sess, data_loader)
+for i in range(5):
+    print gen.pretrain_one_epoch(sess, data_loader)
 # discriminator.pretrain()
 for i in tqdm(range(k)):
     # minibatches of real training data ... do they mean 1 or all minibatches??
@@ -79,7 +79,8 @@ for i in tqdm(range(k)):
         dis.input_y: shuffled_y,
         dis.dropout_keep_prob: DROPOUT_KEEP_PROB
     }
-    _ = sess.run(dis_train_op, feed)
+    _, loss = sess.run([dis_train_op,dis.loss] , feed)
+    print 'dis ' + str(loss)
 
 while N - K >= 0:
     N = N - K
@@ -104,8 +105,9 @@ while N - K >= 0:
             dis.input_y: shuffled_y,
             dis.dropout_keep_prob: DROPOUT_KEEP_PROB
         }
-        _ = sess.run(dis_train_op, feed)
-    
+        _, loss = sess.run([dis_train_op, dis.loss], feed)
+        print 'dis ' + str(loss)    
+
     # minibatch of real training data
     new_minibatch = data_loader.next_batch()
     xij = gen.generate_xij(sess, new_minibatch, N)
