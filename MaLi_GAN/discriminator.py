@@ -54,8 +54,8 @@ class Discriminator(object):
     def build(self):
         # Define weights
         # Hidden layer weights => 2*n_hidden because of forward + backward cells
-        self.weights = tf.Variable(tf.random_normal([2*self.n_hidden, self.n_classes]))
-        self.biases = tf.Variable(tf.random_normal([self.n_classes]))
+        self.weights = tf.get_variable('weights', initializer=tf.random_normal([2*self.n_hidden, self.n_classes]))
+        self.biases = tf.get_variable('biases', initializer=tf.random_normal([self.n_classes]))
         
         self.cell_fw = tf.contrib.rnn.GRUCell(self.n_hidden)
         self.cell_bw = tf.contrib.rnn.GRUCell(self.n_hidden)
