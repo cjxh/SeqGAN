@@ -41,22 +41,13 @@ sess = tf.Session()
 sess.run(tf.global_variables_initializer())
 
 # pretrain 
-for i in range(3):
+for i in range(1):
     epoch_loss = gen.pretrain_one_epoch(sess, data_loader)
     print epoch_loss
-    tloss = target_lstm.target_loss(sess, gen, batch_size, data_loader)
-    print 'tloss: ' + str(tloss)
+    #tloss = target_lstm.target_loss(sess, gen, batch_size, data_loader)
+    #print 'tloss: ' + str(tloss)
 
-accuracies=[]
-for i in range(k):
-    real_minibatch = data_loader.next_batch()
-    gen_minibatch = gen.generate(sess, batch_size)
-    loss, accuracy, output = dis.train_one_step(sess, real_minibatch, gen_minibatch)
-    #print 'dis loss: ' + str(loss) + ', dis accuracy' + str(accuracy)
-    accuracies.append(accuracy)
-print np.mean(accuracies)
-
-for _ in range(10):
+'''for _ in range(10):
     accuracies=[]
     for i in range(k):
         real_minibatch = data_loader.next_batch()
@@ -64,10 +55,25 @@ for _ in range(10):
         loss, accuracy, output = dis.train_one_step(sess, real_minibatch, gen_minibatch)
         #print 'dis loss: ' + str(loss) + ', dis accuracy' + str(accuracy)
         accuracies.append(accuracy)
-    print np.mean(accuracies)
+    print np.mean(accuracies)'''
 
-    gen_minibatch = gen.generate(sess, batch_size)
-    gen.train_one_step(sess, dis, gen_minibatch)
+for _ in range(10):
+    print 'discriminator...'
+    for _ in range(10):
+        accuracies=[]
+        for i in range(k):
+            real_minibatch = data_loader.next_batch()
+            gen_minibatch = gen.generate(sess, batch_size)
+            loss, accuracy, output = dis.train_one_step(sess, real_minibatch, gen_minibatch)
+            #print 'dis loss: ' + str(loss) + ', dis accuracy' + str(accuracy)
+            accuracies.append(accuracy)
+        print np.mean(accuracies)
 
-    tloss = target_lstm.target_loss(sess, gen, batch_size, data_loader)
-    print 'tloss: ' + str(tloss)
+    print 'generator....'
+    gen_minibatch = gen.generate(sess, 128)
+    loss, partial = gen.train_one_step(sess, dis, gen_minibatch)
+    print loss
+    print partial
+
+    #tloss = target_lstm.target_loss(sess, gen, batch_size, data_loader)
+    #print 'tloss: ' + str(tloss)

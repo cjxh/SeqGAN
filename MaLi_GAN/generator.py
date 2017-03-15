@@ -7,7 +7,7 @@ class Generator(object):
     def __init__(self, num_emb, batch_size, emb_dim, hidden_dim,
                  sequence_length, start_token, m, pretrained_embeddings, 
                  learning_rate=0.01, reward_gamma=0.95):
-        self.hidden_dim = 10
+        self.hidden_dim = 200
         self.sequence_length = sequence_length
         #self.batch_size = batch_size
         self.num_emb = num_emb
@@ -82,8 +82,8 @@ class Generator(object):
         rewards = np.divide(rewards, denom) - self.baseline
         #rewards = np.reshape(norm_rewards, (-1))
         feed = {self.x: xij, self.rewards: rewards}
-        outputs = sess.run([self.train_op, self.train_loss], feed)
-        return outputs[1]
+        outputs = sess.run([self.train_op, self.train_loss, self.partial], feed)
+        return outputs[1], outputs[2]
 
     ############################################################################################
 
@@ -96,6 +96,7 @@ class Generator(object):
         contrib = tf.reduce_sum(tf.one_hot(tf.to_int32(self.x), self.num_emb, 1.0, 0.0) * \
             tf.log(tf.clip_by_value(self.g_predictions, 1e-20, 1.0)), 2)
         contrib = contrib * self.rewards
+        self.partial = contrib
         return -tf.reduce_sum(contrib)
 
         # masked = tf.slice(contrib, [0, self.given_num], [-1, -1])

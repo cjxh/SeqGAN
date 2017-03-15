@@ -8,7 +8,7 @@ class Discriminator(object):
         print 'batch_size: ' + str(self.batch_size)
         self.sequence_length = sequence_length
         self.n_classes = n_classes
-        self.n_hidden = 10
+        self.n_hidden = 4
         self.g_embeddings = pretrained_embeddings
 
         self.add_placeholders()
