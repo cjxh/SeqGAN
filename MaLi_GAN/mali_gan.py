@@ -62,14 +62,14 @@ sess.run(tf.global_variables_initializer())
 for i in range(5):
     epoch_loss = gen.pretrain_one_epoch(sess, data_loader)
     print epoch_loss
-    tloss = target_lstm.target_loss(sess, gen, 64)
+    tloss = target_lstm.target_loss(sess, gen, 64, data_loader)
     print 'tloss: ' + str(tloss)
 
 for i in tqdm(range(k)):
     # minibatches of real training data ... do they mean 1 or all minibatches??
     real_minibatch = data_loader.next_batch()
     # minibatch, get first N from real_minibatch, generate the rest
-    gen_minibatch = gen.generate_from_latch(sess, real_minibatches, N)
+    gen_minibatch = gen.generate_from_latch(sess, real_minibatch, N)
     loss = dis.train_one_step(sess, data_loader, real_minibatch, gen_minibatch)
     print 'dis ' + str(loss)
 
@@ -87,5 +87,5 @@ while N - K >= 0:
     new_minibatch = data_loader.next_batch()
     xij = gen.generate_xij(sess, new_minibatch, N)
     print gen.train_one_step(sess, dis, xij,  N) / (T-N)
-    tloss = target_lstm.target_loss(sess, gen, 64)
+    tloss = target_lstm.target_loss(sess, gen, 64, data_loader)
     print 'tloss: ' + str(tloss)

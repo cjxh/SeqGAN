@@ -1,6 +1,6 @@
 import tensorflow as tf
 from tensorflow.python.ops import tensor_array_ops, control_flow_ops
-
+import numpy as np
 
 class TARGET_LSTM(object):
     def __init__(self, num_emb, batch_size, emb_dim, hidden_dim,
@@ -107,11 +107,11 @@ class TARGET_LSTM(object):
         outputs = session.run([self.gen_x])
         return outputs[0]
 
-    def target_loss(self, sess, generator, batch_size):
+    def target_loss(self, sess, generator, batch_size, data_loader):
         supervised_g_losses = []
 
         for it in xrange(data_loader.num_batch):
-            g_loss = sess.run(target_lstm.pretrain_loss, {self.x: generator.generate(sess, batch_size)})
+            g_loss = sess.run(self.pretrain_loss, {self.x: generator.generate(sess, batch_size)})
             supervised_g_losses.append(g_loss)
 
         return np.mean(supervised_g_losses)
