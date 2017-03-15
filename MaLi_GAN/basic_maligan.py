@@ -54,9 +54,10 @@ with open('pretrain_losses.txt', 'w') as f:
     cPickle.dump(losses, f)
 saver.save(sess, 'pretrained')'''
 gensaver = tf.train.Saver([param for param in tf.trainable_variables() if 'generator' in param.name])
-gensaver.restore(sess, './pretrained')
+#gensaver.restore(sess, './pretrained')
+saver.restore(sess, './trained')
 
-for _ in range(10):
+'''for _ in range(10):
     accuracies=[]
     for i in range(k):
         real_minibatch = data_loader.next_batch()
@@ -64,7 +65,7 @@ for _ in range(10):
         loss, accuracy, output = dis.train_one_step(sess, real_minibatch, gen_minibatch)
         #print 'dis loss: ' + str(loss) + ', dis accuracy' + str(accuracy)
         accuracies.append(accuracy)
-    print np.mean(accuracies)
+    print np.mean(accuracies)'''
 
 tlosses = []
 tloss = target_lstm.target_loss(sess, gen, batch_size, data_loader)
@@ -74,42 +75,42 @@ print 'tloss: ' + str(tloss)
 acc = []
 for _ in range(10):
     print 'discriminator...'
-    #for _ in range(100):
-    accuracies=[]
-    for i in range(k):
-        real_minibatch = data_loader.next_batch()
-        gen_minibatch = gen.generate(sess, batch_size)
-        loss, accuracy, output = dis.train_one_step(sess, real_minibatch, gen_minibatch)
-        #print 'dis loss: ' + str(loss) + ', dis accuracy' + str(accuracy)
-        accuracies.append(accuracy)
-        #print accuracy
-    mean_acc =  np.mean(accuracies)
-    print mean_acc
-    #acc.append(mean_acc)
-    #if mean_acc > 0.8:
-    #        break
+    for _ in range(100):
+        accuracies=[]
+        for i in range(k):
+            real_minibatch = data_loader.next_batch()
+            gen_minibatch = gen.generate(sess, batch_size)
+            loss, accuracy, output = dis.train_one_step(sess, real_minibatch, gen_minibatch)
+            #print 'dis loss: ' + str(loss) + ', dis accuracy' + str(accuracy)
+            accuracies.append(accuracy)
+            #print accuracy
+        mean_acc =  np.mean(accuracies)
+        print mean_acc
+        acc.append(mean_acc)
+        if mean_acc > 0.8:
+            break
 
     print 'generator....'
-    #for _ in range(10):
-    #    losses=[]
-    #    for i in range(5):
-    gen_minibatch = gen.generate(sess, 128)
-    loss, partial = gen.train_one_step(sess, dis, gen_minibatch)
-    #losses.append(loss)
-    print loss
+    for _ in range(10):
+        losses=[]
+        for i in range(5):
+            gen_minibatch = gen.generate(sess, 128)
+            loss, partial = gen.train_one_step(sess, dis, gen_minibatch)
+            losses.append(loss)
+        print np.mean(losses)
 
     tloss = target_lstm.target_loss(sess, gen, batch_size, data_loader)
     print 'tloss: ' + str(tloss)
     tlosses.append(tloss)
-    with open('accuracies2.txt', 'w') as f:
+    with open('accuracies3.txt', 'w') as f:
         cPickle.dump(acc, f)
-    with open('eval_losses2.txt', 'w') as f:
+    with open('eval_losses3.txt', 'w') as f:
         cPickle.dump(tlosses, f)
 
-with open('accuracies2.txt', 'w') as f:
+with open('accuracies3.txt', 'w') as f:
     cPickle.dump(acc, f)
 
-with open('eval_losses2.txt', 'w') as f:
+with open('eval_losses3.txt', 'w') as f:
     cPickle.dump(tlosses, f)
 
 saver.save(sess, 'trained')
