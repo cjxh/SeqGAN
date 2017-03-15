@@ -3,12 +3,12 @@ import math
 from tqdm import tqdm
 
 class DataLoader(object):
-    def __init__(self, lexicon, N, batch_size, is_synthetic):
+    def __init__(self, lexicon, N, batch_size): #, is_synthetic):
         self.batch_size = batch_size
         self.token_stream = []
         self.pointer = 0
         self.lexicon = lexicon
-        self.SYNTHETIC = is_synthetic
+        self.SYNTHETIC = True #is_synthetic
         self.END_TOKEN = -1
         self.max_length = N
         #print N

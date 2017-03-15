@@ -37,7 +37,7 @@ class Generator(object):
 
         # maligan functions
         self.train_loss = self.add_train_loss()
-        self.train_op = self.add_train_op(self.train_loss, .1)
+        self.train_op = self.add_train_op(self.train_loss, .01)
         
     ###### Client functions ###################################################################
     def pretrain_one_step(self, sess, input_x):
@@ -78,6 +78,7 @@ class Generator(object):
         rewards = self.RD(dis.get_predictions(sess, xij))
         #rewards = np.reshape(rewards, (-1, self.m))
         denom = np.sum(rewards)
+        #print np.mean(rewards)
         #denom = denom.reshape((np.shape(denom)[0], 1))
         rewards = np.divide(rewards, denom) - self.baseline
         #rewards = np.reshape(norm_rewards, (-1))
