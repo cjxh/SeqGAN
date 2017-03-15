@@ -76,11 +76,11 @@ class Generator(object):
 
     def train_one_step(self, sess, dis, xij):
         rewards = self.RD(dis.get_predictions(sess, xij))
-        rewards = np.reshape(rewards, (-1, self.m))
-        denom = np.sum(rewards, axis=1)
-        denom = denom.reshape((np.shape(denom)[0], 1))
-        norm_rewards = np.divide(rewards, denom) - self.baseline
-        rewards = np.reshape(norm_rewards, (-1))
+        #rewards = np.reshape(rewards, (-1, self.m))
+        denom = np.sum(rewards)
+        #denom = denom.reshape((np.shape(denom)[0], 1))
+        rewards = np.divide(rewards, denom) - self.baseline
+        #rewards = np.reshape(norm_rewards, (-1))
         feed = {self.x: xij, self.rewards: rewards}
         outputs = sess.run([self.train_op, self.train_loss], feed)
         return outputs[1]
@@ -105,7 +105,7 @@ class Generator(object):
     def add_placeholders(self):
         self.x = tf.placeholder(tf.int32, shape=[None, self.sequence_length])
         self.given_num = tf.placeholder(tf.int32)
-        self.rewards = tf.placeholder(tf.float32, shape=[None, ])
+        self.rewards = tf.placeholder(tf.float32, shape=[None, 1])
 
     def add_train_op(self, loss, lr):
         optimizer = tf.train.GradientDescentOptimizer(lr)
