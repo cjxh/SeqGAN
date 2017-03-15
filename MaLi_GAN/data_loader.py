@@ -11,7 +11,7 @@ class DataLoader(object):
         self.SYNTHETIC = is_synthetic
         self.END_TOKEN = -1
         self.max_length = N
-        print N
+        #print N
 
     '''
     normalizes sentence length to max sentence length
@@ -45,7 +45,13 @@ class DataLoader(object):
                 if len(parsed_line) <= self.max_length:
                     self.token_stream.append(parsed_line)
         self.token_stream = self.pre_process_sentences()
-        return
+        # return
+        shuffled_stream = self.shuffle_sentences()
+        self.num_batch = int(len(self.token_stream) / self.batch_size)
+        #print len(self.token_stream)
+        self.token_stream = shuffled_stream[:self.num_batch * self.batch_size]
+        self.mini_batches = np.split(np.array(shuffled_stream), self.num_batch, 0)
+        self.pointer = 0
 
     def next_batch(self):
         ret = self.mini_batches[self.pointer]

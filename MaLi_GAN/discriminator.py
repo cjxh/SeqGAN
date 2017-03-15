@@ -8,7 +8,7 @@ class Discriminator(object):
         print 'batch_size: ' + str(self.batch_size)
         self.sequence_length = sequence_length
         self.n_classes = n_classes
-        self.n_hidden = 10
+        self.n_hidden = 4
         self.g_embeddings = pretrained_embeddings
 
         self.add_placeholders()
@@ -28,21 +28,21 @@ class Discriminator(object):
     def train_one_step(self, sess, x_real, x_fake):
         dis_x_train = np.concatenate((x_real, x_fake), axis=0)
 
-        y_real = [[0, 1] for _ in real_examples]
-        y_fake = [[1, 0] for _ in real_examples]
+        y_real = [[0, 1] for _ in x_real]
+        y_fake = [[1, 0] for _ in x_fake]
         dis_y_train = np.concatenate((y_real, y_fake), axis=0)
 
-        shuffle_idx = np.random.permutation(np.arange(2 * batch_size))
+        shuffle_idx = np.random.permutation(np.arange(len(dis_y_train)))
         shuffled_x =  dis_x_train[shuffle_idx]
         shuffled_y =  dis_y_train[shuffle_idx]
     
         feed = {
-            dis.input_x: shuffled_x,
-            dis.input_y: shuffled_y,
-            dis.dropout_keep_prob: DROPOUT_KEEP_PROB
+            self.input_x: shuffled_x,
+            self.input_y: shuffled_y,
+            self.dropout_keep_prob: 1
         }
-        _, loss, accuracy = sess.run([self.train_op, self.loss, self.accuracy], feed)
-        return loss, accuracy
+        _, loss, accuracy, output = sess.run([self.train_op, self.loss, self.accuracy, self.outputs], feed)
+        return loss, accuracy, output
     ########################
 
     def add_placeholders(self):
@@ -79,5 +79,5 @@ class Discriminator(object):
         return loss
 
     def calc_accuracy(self):
-        correct_preds = tf.equal(tf.argmax(self.input_y, axis=1), tf.argmax(self.outputs, axis=1))
+        correct_preds = tf.equal(tf.argmax(self.input_y, axis=1), tf.argmax(self.preds, axis=1))
         self.accuracy = tf.reduce_mean(tf.cast(correct_preds, tf.float32))
