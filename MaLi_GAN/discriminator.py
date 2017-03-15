@@ -16,13 +16,38 @@ class Discriminator(object):
         self.preds = self.build()
         self.loss = self.add_loss_op()
 
+    ### client functions ###
+    def get_predictions(self, sess, x):
+        feed = {self.input_x: x}
+        return sess.run(self.outputs, feed)
+        
+    def train_one_step(self, sess, data_loader, x_real, x_fake):
+        real_minibatches = data_loader.next_batch()
+        dis_x_train = np.concatenate((x_real, x_fake), axis=0)
+
+        y_real = [[0, 1] for _ in real_examples]
+        y_fake = [[1, 0] for _ in real_examples]
+        dis_y_train = np.concatenate((y_real, y_fake), axis=0)
+
+        shuffle_idx = np.random.permutation(np.arange(2 * batch_size))
+        shuffled_x =  dis_x_train[shuffle_idx]
+        shuffled_y =  dis_y_train[shuffle_idx]
+    
+        feed = {
+            dis.input_x: shuffled_x,
+            dis.input_y: shuffled_y,
+            dis.dropout_keep_prob: DROPOUT_KEEP_PROB
+        }
+        _, loss = sess.run([dis_train_op, dis.loss], feed)
+        return loss
+    ########################
+
     def add_placeholders(self):
         self.input_x = tf.placeholder(tf.int32, shape=[None, self.sequence_length])
         self.input_y = tf.placeholder(tf.float32, shape=[None, 2])
         self.dropout_keep_prob = tf.placeholder(tf.float32, name="dropout_keep_prob")
 
     def add_embedding(self):
-        #embeddings = tf.Variable(self.g_embeddings)
         embeddings = tf.nn.embedding_lookup(self.g_embeddings, self.input_x)
         return tf.cast(embeddings, tf.float32)
     
@@ -44,10 +69,6 @@ class Discriminator(object):
         preds = tf.matmul(output_state, self.weights) + self.biases
         self.outputs = tf.slice(tf.nn.softmax(preds), [0,1],[-1,-1])
         return preds
-
-    def get_predictions(self, sess, x_ij):
-	    feed = {self.input_x: x_ij}
-	    return sess.run(self.outputs, feed)
 
     def add_loss_op(self):
         loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(labels=self.input_y, logits=self.preds))
