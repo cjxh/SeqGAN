@@ -3,12 +3,12 @@ import math
 from tqdm import tqdm
 
 class DataLoader(object):
-    def __init__(self, lexicon, N, batch_size):
+    def __init__(self, lexicon, N, batch_size, is_synthetic):
         self.batch_size = batch_size
         self.token_stream = []
         self.pointer = 0
         self.lexicon = lexicon
-        self.SYNTHETIC = True
+        self.SYNTHETIC = is_synthetic
         self.END_TOKEN = -1
         self.max_length = N
         print N
@@ -29,7 +29,6 @@ class DataLoader(object):
         return temp_token_stream
 
     def load_data(self, data_file):
-        self.token_stream = []
         with open(data_file, 'r') as f:
             print "Parsing sentences in " + str(data_file) + "..."
             for line in tqdm(f):
@@ -39,16 +38,14 @@ class DataLoader(object):
                     line = line.split()
                     parsed_line = [int(num) for num in line]
                 else:
+                    line = line.strip()
+                    line = line.split()
+                    print line
                     parsed_line = [self.lexicon[word] for word in line]
                 if len(parsed_line) <= self.max_length:
                     self.token_stream.append(parsed_line)
         self.token_stream = self.pre_process_sentences()
-        shuffled_stream = self.shuffle_sentences()
-        self.num_batch = int(len(self.token_stream) / self.batch_size)
-        print len(self.token_stream)
-        self.token_stream = shuffled_stream[:self.num_batch * self.batch_size]
-        self.mini_batches = np.split(np.array(shuffled_stream), self.num_batch, 0)
-        self.pointer = 0
+        return
 
     def next_batch(self):
         ret = self.mini_batches[self.pointer]
@@ -71,4 +68,4 @@ class DataLoader(object):
         shuffled_stream = self.shuffle_sentences()
         shuffled_stream = shuffled_stream[:num_batch * batch_size]
         self.mini_batches = np.split(np.array(shuffled_stream), num_batch, 0)
-        return self.mini_batches
+        self.pointer = 0
