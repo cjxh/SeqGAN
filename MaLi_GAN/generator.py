@@ -32,11 +32,11 @@ class Generator(object):
         #self.build_xij()
 
         # pretraining functions
-        self.add_pretrain_loss()
+        self.pretrain_loss = self.add_pretrain_loss()
         self.pretrain_op = self.add_train_op(self.pretrain_loss, .1)
 
         # maligan functions
-        self.add_train_loss()
+        self.train_loss = self.add_train_loss()
         self.train_op = self.add_train_op(self.train_loss, .1)
         
     ###### Client functions ###################################################################
@@ -74,14 +74,14 @@ class Generator(object):
         outputs = sess.run([self.gen_x], feed)
         return outputs[0]
 
-    def train_one_step(self, sess, dis, xij, N):
+    def train_one_step(self, sess, dis, xij):
         rewards = self.RD(dis.get_predictions(sess, xij))
         rewards = np.reshape(rewards, (-1, self.m))
         denom = np.sum(rewards, axis=1)
         denom = denom.reshape((np.shape(denom)[0], 1))
-        norm_rewards = np.divide(rewards, denom) #- self.baseline
+        norm_rewards = np.divide(rewards, denom) - self.baseline
         rewards = np.reshape(norm_rewards, (-1))
-        feed = {self.x: xij, self.rewards: rewards, self.given_num: N}
+        feed = {self.x: xij, self.rewards: rewards}
         outputs = sess.run([self.train_op, self.train_loss], feed)
         return outputs[1]
 
@@ -95,8 +95,12 @@ class Generator(object):
     def add_train_loss(self):
         contrib = tf.reduce_sum(tf.one_hot(tf.to_int32(self.x), self.num_emb, 1.0, 0.0) * \
             tf.log(tf.clip_by_value(self.g_predictions, 1e-20, 1.0)), 2)
-        masked = tf.slice(contrib, [0, self.given_num], [-1, -1])
-        self.train_loss = -tf.reduce_sum(tf.reduce_sum(masked, 1) * self.rewards)
+        contrib = contrib * self.rewards
+        return -tf.reduce_sum(contrib)
+
+        # masked = tf.slice(contrib, [0, self.given_num], [-1, -1])
+        # self.train_loss = -tf.reduce_sum(tf.reduce_sum(masked, 1) * self.rewards)
+
 
     def add_placeholders(self):
         self.x = tf.placeholder(tf.int32, shape=[None, self.sequence_length])
@@ -114,7 +118,7 @@ class Generator(object):
         return optimizer.apply_gradients(zip(gradients, variables))'''
 
     def add_pretrain_loss(self):
-        self.pretrain_loss = -tf.reduce_sum(
+        return -tf.reduce_sum(
             tf.one_hot(tf.to_int32(tf.reshape(self.x, [-1])), self.num_emb, 1.0, 0.0) * tf.log(
                 tf.clip_by_value(tf.reshape(self.g_predictions, [-1, self.num_emb]), 1e-20, 1.0)
             )

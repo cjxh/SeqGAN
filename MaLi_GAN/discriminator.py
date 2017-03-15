@@ -14,15 +14,18 @@ class Discriminator(object):
         self.add_placeholders()
         self.x = self.add_embedding()
         self.preds = self.build()
+        self.calc_accuracy()
         self.loss = self.add_loss_op()
+
+        dis_optimizer = tf.train.AdamOptimizer(1e-4)
+        self.train_op = dis_optimizer.minimize(self.loss)
 
     ### client functions ###
     def get_predictions(self, sess, x):
         feed = {self.input_x: x}
         return sess.run(self.outputs, feed)
         
-    def train_one_step(self, sess, data_loader, x_real, x_fake):
-        real_minibatches = data_loader.next_batch()
+    def train_one_step(self, sess, x_real, x_fake):
         dis_x_train = np.concatenate((x_real, x_fake), axis=0)
 
         y_real = [[0, 1] for _ in real_examples]
@@ -38,8 +41,8 @@ class Discriminator(object):
             dis.input_y: shuffled_y,
             dis.dropout_keep_prob: DROPOUT_KEEP_PROB
         }
-        _, loss = sess.run([dis_train_op, dis.loss], feed)
-        return loss
+        _, loss, accuracy = sess.run([self.train_op, self.loss, self.accuracy], feed)
+        return loss, accuracy
     ########################
 
     def add_placeholders(self):
@@ -74,3 +77,7 @@ class Discriminator(object):
         loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(labels=self.input_y, logits=self.preds))
         # add regularization?
         return loss
+
+    def calc_accuracy(self):
+        correct_preds = tf.equal(tf.argmax(self.input_y, axis=1), tf.argmax(self.outputs, axis=1))
+        self.accuracy = tf.reduce_mean(tf.cast(correct_preds, tf.float32))
