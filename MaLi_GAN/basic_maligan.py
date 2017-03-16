@@ -37,15 +37,25 @@ with tf.variable_scope('generator'):
 with tf.variable_scope('discriminator'):
     dis = Discriminator(N, batch_size, n_classes, pretrained_embeddings)
 
+saver = tf.train.Saver()
 sess = tf.Session()
 sess.run(tf.global_variables_initializer())
 
 # pretrain 
-for i in range(1):
+'''losses = []
+for i in range(20):
     epoch_loss = gen.pretrain_one_epoch(sess, data_loader)
     print epoch_loss
+    losses.append(epoch_loss)
     #tloss = target_lstm.target_loss(sess, gen, batch_size, data_loader)
     #print 'tloss: ' + str(tloss)
+
+with open('pretrain_losses.txt', 'w') as f:
+    cPickle.dump(losses, f)
+saver.save(sess, 'pretrained')'''
+gensaver = tf.train.Saver([param for param in tf.trainable_variables() if 'generator' in param.name])
+#gensaver.restore(sess, './pretrained')
+saver.restore(sess, './trained')
 
 '''for _ in range(10):
     accuracies=[]
@@ -57,9 +67,15 @@ for i in range(1):
         accuracies.append(accuracy)
     print np.mean(accuracies)'''
 
+tlosses = []
+tloss = target_lstm.target_loss(sess, gen, batch_size, data_loader)
+tlosses.append(tloss)
+print 'tloss: ' + str(tloss)
+
+acc = []
 for _ in range(10):
     print 'discriminator...'
-    for _ in range(10):
+    for _ in range(100):
         accuracies=[]
         for i in range(k):
             real_minibatch = data_loader.next_batch()
@@ -67,13 +83,34 @@ for _ in range(10):
             loss, accuracy, output = dis.train_one_step(sess, real_minibatch, gen_minibatch)
             #print 'dis loss: ' + str(loss) + ', dis accuracy' + str(accuracy)
             accuracies.append(accuracy)
-        print np.mean(accuracies)
+            #print accuracy
+        mean_acc =  np.mean(accuracies)
+        print mean_acc
+        acc.append(mean_acc)
+        if mean_acc > 0.8:
+            break
 
     print 'generator....'
-    gen_minibatch = gen.generate(sess, 128)
-    loss, partial = gen.train_one_step(sess, dis, gen_minibatch)
-    print loss
-    print partial
+    for _ in range(10):
+        losses=[]
+        for i in range(5):
+            gen_minibatch = gen.generate(sess, 128)
+            loss, partial = gen.train_one_step(sess, dis, gen_minibatch)
+            losses.append(loss)
+        print np.mean(losses)
 
-    #tloss = target_lstm.target_loss(sess, gen, batch_size, data_loader)
-    #print 'tloss: ' + str(tloss)
+    tloss = target_lstm.target_loss(sess, gen, batch_size, data_loader)
+    print 'tloss: ' + str(tloss)
+    tlosses.append(tloss)
+    with open('accuracies3.txt', 'w') as f:
+        cPickle.dump(acc, f)
+    with open('eval_losses3.txt', 'w') as f:
+        cPickle.dump(tlosses, f)
+
+with open('accuracies3.txt', 'w') as f:
+    cPickle.dump(acc, f)
+
+with open('eval_losses3.txt', 'w') as f:
+    cPickle.dump(tlosses, f)
+
+saver.save(sess, 'trained')
