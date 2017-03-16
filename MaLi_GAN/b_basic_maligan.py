@@ -42,8 +42,8 @@ sess = tf.Session()
 sess.run(tf.global_variables_initializer())
 
 # pretrain 
-'''losses = []
-for i in range(20):
+losses = []
+for i in range(50):
     epoch_loss = gen.pretrain_one_epoch(sess, data_loader)
     print epoch_loss
     losses.append(epoch_loss)
@@ -52,10 +52,12 @@ for i in range(20):
 
 with open('pretrain_losses.txt', 'w') as f:
     cPickle.dump(losses, f)
-saver.save(sess, 'pretrained')'''
-gensaver = tf.train.Saver([param for param in tf.trainable_variables() if 'generator' in param.name])
+saver.save(sess, 'pretrained')
+
+
+#gensaver = tf.train.Saver([param for param in tf.trainable_variables() if 'generator' in param.name])
 #gensaver.restore(sess, './pretrained')
-saver.restore(sess, './trained')
+#saver.restore(sess, './trained')
 
 '''for _ in range(10):
     accuracies=[]
