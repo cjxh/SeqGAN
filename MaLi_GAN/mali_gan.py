@@ -31,9 +31,9 @@ with open('data/word_lexicon.txt', 'r') as f:
 
 # load real data
 positive_file = 'save/real_data.txt'
-data_loader = dl(lexicon, N, batch_size)
+data_loader = dl(N, batch_size, True, positive_file, lexicon)
 print "Loading data from " + positive_file + " into memory..."
-positive_data = data_loader.load_data(positive_file)
+positive_data = data_loader.mini_batch(batch_size)
 #pretrained_embeddings = np.load('data/glove_vectors.npy')
 
 

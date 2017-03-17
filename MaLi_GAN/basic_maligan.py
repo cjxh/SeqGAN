@@ -22,9 +22,9 @@ lexicon = {}
 
 # load real data
 positive_file = 'save/real_data.txt'
-data_loader = dl(lexicon, N, batch_size)
+data_loader = dl(N, batch_size, True, positive_file, lexicon)
 print "Loading data from " + positive_file + " into memory..."
-positive_data = data_loader.load_data(positive_file)
+positive_data = data_loader.mini_batch(batch_size)
 
 pretrained_embeddings = tf.get_variable('embeddings', initializer=tf.random_normal([5000, 300]))
 
