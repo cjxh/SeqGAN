@@ -1,4 +1,3 @@
-import model
 import numpy as np
 import tensorflow as tf
 import random
@@ -29,14 +28,6 @@ generated_num = 10000
 ##############################################################################################
 
 
-class PoemGen(model.LSTM):
-    def g_optimizer(self, *args, **kwargs):
-        return tf.train.AdamOptimizer()  # ignore learning rate
-
-
-def get_trainable_model(num_emb):
-    return PoemGen(num_emb, GCONFIG.BATCH_SIZE, GCONFIG.EMB_DIM, GCONFIG.HIDDEN_DIM, \
-        GCONFIG.SEQ_LENGTH, GCONFIG.START_TOKEN)
 
 
 def generate_samples(sess, trainable_model, batch_size, generated_num, output_file):
@@ -94,11 +85,11 @@ def pre_train_epoch(sess, trainable_model, data_loader):
 
 
 def main():
-    random.seed(GCONFIG.SEED)
-    np.random.seed(GCONFIG.SEED)
+    random.seed(88)
+    np.random.seed(88)
 
-    assert GCONFIG.START_TOKEN == 0
-
+    #assert GCONFIG.START_TOKEN == 0
+    vocab_size = 5000
 
     target_params = cPickle.load(open('save/target_params.pkl'))
     target_lstm = TARGET_LSTM(vocab_size, 64, 32, 32, 20, 0, target_params)
@@ -114,4 +105,8 @@ def main():
     sess.run(tf.global_variables_initializer())
 
     generate_samples(sess, target_lstm, 64, 10000, positive_file)
-    gen_data_loader.create_batches(positive_file)
+    #gen_data_loader.create_batches(positive_file)
+
+
+if __name__ == '__main__':
+    main()
