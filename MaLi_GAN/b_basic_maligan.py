@@ -6,16 +6,20 @@ from generator import Generator
 from discriminator import Discriminator
 import cPickle
 from target_lstm import TARGET_LSTM
+import time, os
+TIME = time.strftime('%Y%m%d-%H%M%S')
 
 # initialize constants
 T = 20
 N = T
 K = 1
-k = 100
+k = 10
 DROPOUT_KEEP_PROB = 0.75
 batch_size = 32
 embedding_size = 300
 n_classes = 2
+
+
 
 # populate the lexicon of existing words
 lexicon = {}
@@ -41,11 +45,11 @@ with tf.variable_scope('discriminator'):
     dis = Discriminator(N, batch_size, pretrained_embeddings)
 
 saver = tf.train.Saver()
-gensaver = tf.train.Saver([param for param in tf.trainable_variables() if 'generator' in param.name or 'embeddings' == param.name] )
+gensaver = tf.train.Saver([param for param in tf.trainable_variables() if 'generator' in param.name or 'embeddings' in param.name] )
 sess = tf.Session()
 sess.run(tf.global_variables_initializer())
 
-gensaver.restore(sess, './pretrained_eval')
+gensaver.restore(sess, './test1/pretrained_eval')
 '''# pretrain 
 losses = []
 for i in range(50):
@@ -64,58 +68,58 @@ saver.save(sess, 'pretrained')'''
 #gensaver.restore(sess, './pretrained')
 #saver.restore(sess, './trained')
 
-'''for _ in range(10):
+if not os.path.exists('./'+TIME):
+    os.makedirs('./'+TIME)
+
+acc = []
+for _ in range(100):
     accuracies=[]
-    for i in range(k):
-        real_minibatch = data_loader.next_batch()
+    for i in range(100):
+        real_minibatch, _ = data_loader.next_batch()
         gen_minibatch = gen.generate(sess, batch_size)
         loss, accuracy, output = dis.train_one_step(sess, real_minibatch, gen_minibatch)
-        #print 'dis loss: ' + str(loss) + ', dis accuracy' + str(accuracy)
         accuracies.append(accuracy)
-    print np.mean(accuracies)'''
+    mean_acc =  np.mean(accuracies)
+    print mean_acc
+    acc.append(mean_acc)
+    if mean_acc > 0.8:
+        break
 
 perps = []
 perp = gen.get_perplexity(sess, eval_dl)
 perps.append(perp)
 print 'perp: ' + str(perp)
 
-acc = []
-for _ in range(10):
-    print 'discriminator...'
-    for _ in range(100):
-        accuracies=[]
-        for i in range(k):
-            real_minibatch, _ = data_loader.next_batch()
-            gen_minibatch = gen.generate(sess, batch_size)
-            loss, accuracy, output = dis.train_one_step(sess, real_minibatch, gen_minibatch)
-            #print 'dis loss: ' + str(loss) + ', dis accuracy' + str(accuracy)
-            accuracies.append(accuracy)
-            #print accuracy
-        mean_acc =  np.mean(accuracies)
-        print mean_acc
-        acc.append(mean_acc)
-        if mean_acc > 0.8:
-            break
+for _ in range(100):
+    # print 'discriminator...'
+    # for i in range(k):
+    #     real_minibatch, _ = data_loader.next_batch()
+    #     gen_minibatch = gen.generate(sess, batch_size)
+    #     loss, accuracy, output = dis.train_one_step(sess, real_minibatch, gen_minibatch)
+    #     acc.append(accuracy)
 
-    print 'generator....'
-    for _ in range(10):
-        for i in range(5):
-            gen_minibatch = gen.generate(sess, 512)
-            loss, partial = gen.train_one_step(sess, dis, gen_minibatch)
+    print 'generator...'
+    for i in range(5):
+        gen_minibatch = gen.generate(sess, 32)
+        loss, partial = gen.train_one_step(sess, dis, gen_minibatch)
+
+        gen_minibatch = gen.generate(sess, 32)
+        real_minibatch, _ = data_loader.next_batch()
+        dis.get_accuracy(sess, real_minibatch, gen_minibatch)
 
     perp = gen.get_perplexity(sess, eval_dl)
     print 'perp: ' + str(perp)
     perps.append(perp)
-    with open('accuracies_e.txt', 'w') as f:
+    with open(TIME + '/accuracies.txt', 'w') as f:
         cPickle.dump(acc, f)
     with open('eval_perps.txt', 'w') as f:
         cPickle.dump(perps, f)
-    saver.save(sess, 'trained_e')
+    saver.save(sess, './'+TIME +'/trained')
 
-with open('accuracies_e.txt', 'w') as f:
+with open(TIME + '/accuracies.txt', 'w') as f:
     cPickle.dump(acc, f)
 
-with open('eval_perps.txt', 'w') as f:
+with open(TIME + '/eval_perps.txt', 'w') as f:
     cPickle.dump(perps, f)
 
-saver.save(sess, 'trained_e')
+saver.save(sess, './'+TIME +'/trained')
