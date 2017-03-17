@@ -8,26 +8,25 @@ END = 2
 def preprocess_penn(data_file, lexicon_file, glove_file, emb_size, max_length):
     all_words = set([])
     token_stream = []
+    write_tokens = open('preprocessed_' + data_file + '.txt', 'w')
     with open(data_file + '.conll', 'r') as f:
         print "Pre-processing sentences in the Pen TreeBank..."
-        parsed_line = ['<START>']
+        write_tokens.write('<START>\n')
         for i, word in tqdm(enumerate(f)):
-            if word != ' ':
-                parsed_line.append(word)
+            word = word.strip()
+            if word != '':
+                write_tokens.write(word + '\n')
                 all_words.add(word)
-            elif word == ' ' and (len(parsed_line) <= max_length):
-                parsed_line.append('<END>')
-                token_stream.append(parsed_line)
-                parsed_line = ['<START>']
-    new_lexicon = trim_glove(all_words, lexicon_file, glove_file, emb_size)
-    f = open('preprocessed_' + data_file + '.txt', 'w')
-    for word in tqdm(token_stream):
-        f.write(word)
-    f.close()
+            else:
+                write_tokens.write('<END>\n')
+                write_tokens.write('<START>\n')
+    write_tokens.close()
+    '''
     f = open('trimmed_' + lexicon_file, 'w')
     for word in tqdm(new_lexicon.keys()):
         f.write(word)
     return token_stream, new_lexicon
+    '''
 
 def create_lexicon(file_name):
     counter = 0
