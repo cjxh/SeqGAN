@@ -9,7 +9,7 @@ import cPickle
 # initialize constants
 seqlen = 20
 DROPOUT_KEEP_PROB = 0.75
-batch_size = 32
+batch_size = 512
 embedding_size = 300
 vocab_size = 5000
 
@@ -24,16 +24,18 @@ pretrained_embeddings = tf.get_variable('embeddings', initializer=tf.random_norm
 
 with tf.variable_scope('generator'):
     gen = Generator(vocab_size, batch_size, embedding_size, 150, seqlen, 0, 10, pretrained_embeddings)
-with tf.variable_scope('discriminator'):
-    dis = Discriminator(seqlen, batch_size, pretrained_embeddings)
+#with tf.variable_scope('discriminator'):
+#    dis = Discriminator(seqlen, batch_size, pretrained_embeddings)
 
 saver = tf.train.Saver()
 sess = tf.Session()
 sess.run(tf.global_variables_initializer())
 
+saver.restore(sess, './pretrained')
+
 # pretrain 
-perplexities = []
-for i in range(50):
+perplexities = cPickle.load(open('pretrain_perplexities.txt'))
+for i in range(500):
     loss = gen.pretrain_one_epoch(sess, pos_dl)
     if i % 5 == 0:
     	perp = gen.get_perplexity(sess, eval_dl)

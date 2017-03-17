@@ -40,9 +40,9 @@ class Generator(object):
         self.train_op = self.add_train_op(self.train_loss, .01)
         
     ###### Client functions ###################################################################
-    def pretrain_one_step(self, sess, input_x):
+    def pretrain_one_step(self, sess, input_x, input_mask):
         #### Call this to pretrain #######
-        feed = {self.x: input_x}
+        feed = {self.x: input_x, self.mask : input_mask}
         _, loss = sess.run([self.pretrain_op, self.pretrain_loss], feed_dict=feed)
         return loss
 
@@ -51,14 +51,14 @@ class Generator(object):
         data_loader.reset_pointer()
 
         for it in xrange(data_loader.num_batch):
-            batch = data_loader.next_batch()
-            g_loss = self.pretrain_one_step(sess, batch)
+            batch, mask_batch = data_loader.next_batch()
+            g_loss = self.pretrain_one_step(sess, batch, mask_batch)
             supervised_g_losses.append(g_loss)
 
         return np.mean(supervised_g_losses)
 
     def get_perplexity(self, sess, data_loader):
-        return np.exp(pretrain_one_epoch(self, sess, data_loader))
+        return np.exp(self.pretrain_one_epoch(sess, data_loader))
 
     def generate_from_latch(self, sess, input_x, N):
         feed = {self.x: input_x, self.given_num: N}
@@ -109,6 +109,7 @@ class Generator(object):
     def add_placeholders(self):
         self.x = tf.placeholder(tf.int32, shape=[None, self.sequence_length])
         self.given_num = tf.placeholder(tf.int32)
+        self.mask = tf.placeholder(tf.int32, shape=[None, self.sequence_length])
         self.rewards = tf.placeholder(tf.float32, shape=[None, 1])
 
     def add_train_op(self, loss, lr):
@@ -123,10 +124,10 @@ class Generator(object):
 
     def add_pretrain_loss(self):
         return -tf.reduce_sum(
-            tf.one_hot(tf.to_int32(tf.reshape(self.x, [-1])), self.num_emb, 1.0, 0.0) * tf.log(
+            tf.one_hot(tf.to_int32(tf.reshape(tf.boolean_mask(self.x, self.mask), [-1])), self.num_emb, 1.0, 0.0) * tf.log(
                 tf.clip_by_value(tf.reshape(self.g_predictions, [-1, self.num_emb]), 1e-20, 1.0)
             )
-        ) / (self.sequence_length * tf.to_float(self.batch_size))
+        ) / tf.reduce_sum(tf.cast(self.mask, tf.float32))#(self.sequence_length * tf.to_float(self.batch_size))
 
     def preprocess_x(self):
         with tf.device("/cpu:0"):
