@@ -17,7 +17,7 @@ vocab_size = 5000
 positive_file = 'save/real_data.txt'
 pos_dl = dl(seqlen, batch_size, True, positive_file)
 
-eval_file = 'save/real_data.txt'
+eval_file = 'save/eval_data.txt'
 eval_dl = dl(seqlen, batch_size, True, positive_file)
 
 pretrained_embeddings = tf.get_variable('embeddings', initializer=tf.random_normal([vocab_size, embedding_size]))
@@ -31,10 +31,10 @@ saver = tf.train.Saver()
 sess = tf.Session()
 sess.run(tf.global_variables_initializer())
 
-saver.restore(sess, './pretrained')
+#saver.restore(sess, './pretrained')
 
 # pretrain 
-perplexities = cPickle.load(open('pretrain_perplexities.txt'))
+perplexities = []#cPickle.load(open('pretrain_perplexities.txt'))
 for i in range(500):
     loss = gen.pretrain_one_epoch(sess, pos_dl)
     if i % 5 == 0:
@@ -42,10 +42,10 @@ for i in range(500):
     	print perp
     	perplexities.append(perp)
 
-    	with open('pretrain_perplexities.txt', 'w') as f:
+    	with open('pretrain_perplexities_eval.txt', 'w') as f:
     		cPickle.dump(perplexities, f)
-    	saver.save(sess, 'pretrained')
+    	saver.save(sess, 'pretrained_eval')
 
-with open('pretrain_perplexities.txt', 'w') as f:
+with open('pretrain_perplexities_eval.txt', 'w') as f:
     cPickle.dump(perplexities, f)
-saver.save(sess, 'pretrained')
+saver.save(sess, 'pretrained_eval')
