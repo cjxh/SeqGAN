@@ -32,7 +32,7 @@ saver = tf.train.Saver()
 sess = tf.Session()
 sess.run(tf.global_variables_initializer())
 
-saver.restore(sess, './pretrained')
+#saver.restore(sess, './pretrained')
 
 # pretrain 
 perplexities = cPickle.load(open('pretrain_perplexities.txt'))
