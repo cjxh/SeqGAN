@@ -9,16 +9,16 @@ import cPickle
 # initialize constants
 seqlen = 20
 DROPOUT_KEEP_PROB = 0.75
-batch_size = 512
+batch_size = 64
 embedding_size = 300
 vocab_size = 5000
 
 # load real data
-positive_file = 'save/real_data.txt'
-pos_dl = dl(seqlen, batch_size, True, positive_file)
+positive_file = 'data/preprocessed_train_sentences.txt'
+pos_dl = dl(seqlen, batch_size, False, positive_file)
 
-eval_file = 'save/real_data.txt'
-eval_dl = dl(seqlen, batch_size, True, positive_file)
+eval_file = 'data/preprocessed_dev_sentences.txt'
+eval_dl = dl(seqlen, batch_size, False, eval_file)
 
 pretrained_embeddings = tf.get_variable('embeddings', initializer=tf.random_normal([vocab_size, embedding_size]))
 
