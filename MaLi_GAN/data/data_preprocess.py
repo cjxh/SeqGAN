@@ -56,5 +56,6 @@ def trim_glove(all_words, lexicon_file, glove_file, emb_size):
 
 lexicon = {}
 
-dl = preprocess_penn('train_sentences', 'word_lexicon.txt', 'glove_vectors.npy', 300, 35)
+dl = preprocess_penn('test_sentences', 'word_lexicon.txt', 'glove_vectors.npy', 300, 35)
+
 
