@@ -2,16 +2,23 @@ import numpy as np
 import math
 from tqdm import tqdm
 
+UNK = 0
+START = 1 
+END = 2
+
 class DataLoader(object):
-    def __init__(self, lexicon, N, batch_size): #, is_synthetic):
+    def __init__(self, N, batch_size, is_synthetic, data_file, lexicon = {}):
         self.batch_size = batch_size
         self.token_stream = []
         self.pointer = 0
+        self.SYNTHETIC = is_synthetic
+        self.sentences = []
         self.lexicon = lexicon
-        self.SYNTHETIC = True #is_synthetic
-        self.END_TOKEN = -1
+        if not is_synthetic:
+            self.load_data()
+        else:
+            self.load_syn_data(data_file)
         self.max_length = N
-        #print N
 
     '''
     normalizes sentence length to max sentence length
@@ -28,30 +35,29 @@ class DataLoader(object):
             temp_token_stream.append(sentence)
         return temp_token_stream
 
-    def load_data(self, data_file):
+    def load_syn_data(self, data_file):
         with open(data_file, 'r') as f:
             print "Parsing sentences in " + str(data_file) + "..."
-            for line in tqdm(f):
-                parsed_line = []
+            for i, line in tqdm(enumerate(f)):
                 if self.SYNTHETIC:
+                    parsed_line = []
                     line = line.strip()
                     line = line.split()
                     parsed_line = [int(num) for num in line]
+                    if len(parsed_line) <= self.max_length:
+                        self.token_stream.append(parsed_line)
+            self.token_stream = self.pre_process_sentences()
+
+    def load_data(self):
+        for sentence in self.sentences:
+            parsed_line = []
+            for word in sentence:
+                if word in self.lexicon.keys():
+                    parsed_line.append(self.lexicon[word])
                 else:
-                    line = line.strip()
-                    line = line.split()
-                    print line
-                    parsed_line = [self.lexicon[word] for word in line]
-                if len(parsed_line) <= self.max_length:
-                    self.token_stream.append(parsed_line)
+                    parsed_line.append(UNK)
+            self.token_stream.append(parsed_line)
         self.token_stream = self.pre_process_sentences()
-        # return
-        shuffled_stream = self.shuffle_sentences()
-        self.num_batch = int(len(self.token_stream) / self.batch_size)
-        #print len(self.token_stream)
-        self.token_stream = shuffled_stream[:self.num_batch * self.batch_size]
-        self.mini_batches = np.split(np.array(shuffled_stream), self.num_batch, 0)
-        self.pointer = 0
 
     def next_batch(self):
         ret = self.mini_batches[self.pointer]
