@@ -57,6 +57,9 @@ class Generator(object):
 
         return np.mean(supervised_g_losses)
 
+    def get_perplexity(self, sess, data_loader):
+        return np.exp(pretrain_one_epoch(self, sess, data_loader))
+
     def generate_from_latch(self, sess, input_x, N):
         feed = {self.x: input_x, self.given_num: N}
         outputs = sess.run([self.gen_x], feed)
@@ -102,7 +105,6 @@ class Generator(object):
 
         # masked = tf.slice(contrib, [0, self.given_num], [-1, -1])
         # self.train_loss = -tf.reduce_sum(tf.reduce_sum(masked, 1) * self.rewards)
-
 
     def add_placeholders(self):
         self.x = tf.placeholder(tf.int32, shape=[None, self.sequence_length])
