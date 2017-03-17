@@ -16,11 +16,9 @@ vocab_size = 5000
 # load real data
 positive_file = 'save/real_data.txt'
 pos_dl = dl(seqlen, batch_size, True, positive_file)
-pos_data = pos_dl.load_data()
 
 eval_file = 'save/real_data.txt'
 eval_dl = dl(seqlen, batch_size, True, positive_file)
-eval_data = eval_dl.load_data()
 
 pretrained_embeddings = tf.get_variable('embeddings', initializer=tf.random_normal([vocab_size, embedding_size]))
 
@@ -36,9 +34,9 @@ sess.run(tf.global_variables_initializer())
 # pretrain 
 perplexities = []
 for i in range(50):
-    loss = gen.pretrain_one_epoch(sess, pos_data)
+    loss = gen.pretrain_one_epoch(sess, pos_dl)
     if i % 5 == 0:
-    	perp = gen.get_perplexity(sess, eval_data)
+    	perp = gen.get_perplexity(sess, eval_dl)
     	print perp
     	perplexities.append(perp)
 
