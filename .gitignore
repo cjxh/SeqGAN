@@ -3,4 +3,5 @@
 *.swp
 MaLi_GAN/data/glove_vectors.txt
 MaLi_GAN/data/glove_vectors.npy
-
+MaLi_GAN/data/word_lexicon.txt
+MaLi_GAN/data/train.conll
