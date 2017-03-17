@@ -7,7 +7,7 @@ from discriminator import Discriminator
 import cPickle
 
 # initialize constants
-seqlen = 20
+seqlen = 35
 DROPOUT_KEEP_PROB = 0.75
 batch_size = 64
 embedding_size = 300
@@ -20,7 +20,8 @@ pos_dl = dl(seqlen, batch_size, False, positive_file)
 eval_file = 'data/preprocessed_dev_sentences.txt'
 eval_dl = dl(seqlen, batch_size, False, eval_file)
 
-pretrained_embeddings = tf.get_variable('embeddings', initializer=tf.random_normal([vocab_size, embedding_size]))
+#pretrained_embeddings = tf.get_variable('embeddings', initializer=tf.random_normal([vocab_size, embedding_size]))
+pretrained_embeddings = tf.get_variable('embeddings', initializer=np.load('data/trimmed_glove_vectors.npy'))
 
 with tf.variable_scope('generator'):
     gen = Generator(vocab_size, batch_size, embedding_size, 150, seqlen, 0, 10, pretrained_embeddings)

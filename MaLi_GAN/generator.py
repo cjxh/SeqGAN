@@ -16,7 +16,7 @@ class Generator(object):
         self.m = m
         self.baseline = 0
 
-        self.g_embeddings = pretrained_embeddings
+        self.g_embeddings = tf.cast(pretrained_embeddings, tf.float32)
         
         self.g_recurrent_unit = self.create_recurrent_unit()  # maps h_tm1 to h_t for generator
         self.g_output_unit = self.create_output_unit()  # maps h_t to o_t (output token logits)
@@ -109,7 +109,7 @@ class Generator(object):
     def add_placeholders(self):
         self.x = tf.placeholder(tf.int32, shape=[None, self.sequence_length])
         self.given_num = tf.placeholder(tf.int32)
-        self.mask = tf.placeholder(tf.int32, shape=[None, self.sequence_length])
+        self.mask = tf.placeholder(tf.bool, shape=[None, self.sequence_length])
         self.rewards = tf.placeholder(tf.float32, shape=[None, 1])
 
     def add_train_op(self, loss, lr):
@@ -123,9 +123,10 @@ class Generator(object):
         return optimizer.apply_gradients(zip(gradients, variables))'''
 
     def add_pretrain_loss(self):
+        print self.g_predictions
         return -tf.reduce_sum(
-            tf.one_hot(tf.to_int32(tf.reshape(tf.boolean_mask(self.x, self.mask), [-1])), self.num_emb, 1.0, 0.0) * tf.log(
-                tf.clip_by_value(tf.reshape(self.g_predictions, [-1, self.num_emb]), 1e-20, 1.0)
+            tf.one_hot(tf.to_int32(tf.reshape(tf.boolean_mask(tensor=self.x, mask=self.mask), [-1])), self.num_emb, 1.0, 0.0) * tf.log(
+                tf.clip_by_value(tf.reshape(tf.boolean_mask(tensor=self.g_predictions, mask=self.mask), [-1, self.num_emb]), 1e-20, 1.0)
             )
         ) / tf.reduce_sum(tf.cast(self.mask, tf.float32))#(self.sequence_length * tf.to_float(self.batch_size))
 
