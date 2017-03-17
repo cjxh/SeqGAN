@@ -2,12 +2,12 @@ import tensorflow as tf
 import numpy as np
 
 class Discriminator(object):
-    def __init__(self, sequence_length, batch_size, n_classes, pretrained_embeddings):
+    def __init__(self, sequence_length, batch_size, pretrained_embeddings):
         print "Initializing discriminator..."
         self.batch_size = 2 * batch_size
         print 'batch_size: ' + str(self.batch_size)
         self.sequence_length = sequence_length
-        self.n_classes = n_classes
+        self.n_classes = 2
         self.n_hidden = 10
         self.g_embeddings = pretrained_embeddings
 

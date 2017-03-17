@@ -9,6 +9,7 @@ END = 2
 class DataLoader(object):
     def __init__(self, N, batch_size, is_synthetic, data_file, lexicon = {}):
         self.batch_size = batch_size
+        self.max_length = N
         self.token_stream = []
         self.pointer = 0
         self.SYNTHETIC = is_synthetic
@@ -18,7 +19,7 @@ class DataLoader(object):
             self.load_data(data_file)
         else:
             self.load_syn_data(data_file)
-        self.max_length = N
+        
 
     '''
     normalizes sentence length to max sentence length
