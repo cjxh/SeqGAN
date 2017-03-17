@@ -15,7 +15,7 @@ class DataLoader(object):
         self.sentences = []
         self.lexicon = lexicon
         if not is_synthetic:
-            self.load_data()
+            self.load_data(data_file)
         else:
             self.load_syn_data(data_file)
         self.max_length = N
@@ -37,7 +37,7 @@ class DataLoader(object):
 
     def load_syn_data(self, data_file):
         with open(data_file, 'r') as f:
-            print "Parsing sentences in " + str(data_file) + "..."
+            print "Parsing synthetic sentences in " + str(data_file) + "..."
             for i, line in tqdm(enumerate(f)):
                 if self.SYNTHETIC:
                     parsed_line = []
@@ -48,15 +48,18 @@ class DataLoader(object):
                         self.token_stream.append(parsed_line)
             self.token_stream = self.pre_process_sentences()
 
-    def load_data(self):
-        for sentence in self.sentences:
+    def load_data(self, data_file):
+        with open(data_file, 'r') as f:
+            print "Parsing sentences in " + str(data_file) + "..."
             parsed_line = []
-            for word in sentence:
+            for word in tqdm(f):
                 if word in self.lexicon.keys():
                     parsed_line.append(self.lexicon[word])
                 else:
                     parsed_line.append(UNK)
-            self.token_stream.append(parsed_line)
+                if word == '<END>' and len(parsed_line) <= self.max_length:
+                    self.token_stream.append(parsed_line)
+                    parsed_line = []
         self.token_stream = self.pre_process_sentences()
 
     def next_batch(self):
