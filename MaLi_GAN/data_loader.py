@@ -9,6 +9,7 @@ END = 2
 class DataLoader(object):
     def __init__(self, N, batch_size, is_synthetic, data_file, lexicon = {}):
         self.batch_size = batch_size
+        self.num_batch = 0
         self.max_length = N
         self.token_stream = []
         self.pointer = 0
@@ -19,7 +20,7 @@ class DataLoader(object):
             self.load_data()
         else:
             self.load_syn_data(data_file)
-        
+        self.mini_batch(self.batch_size)
 
     '''
     normalizes sentence length to max sentence length
@@ -40,6 +41,7 @@ class DataLoader(object):
         with open(data_file, 'r') as f:
             print "Parsing sentences in " + str(data_file) + "..."
             for i, line in tqdm(enumerate(f)):
+                self.num_batch += 1
                 if self.SYNTHETIC:
                     parsed_line = []
                     line = line.strip()
