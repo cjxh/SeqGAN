@@ -61,16 +61,21 @@ class DataLoader(object):
         with open(data_file, 'r') as f:
             print "Parsing sentences in " + str(data_file) + "..."
             parsed_line = []
+            word_ct = 0
+            sentence_ct = 0
             for word in tqdm(f):
+                word_ct += 1
                 word = word.strip()
                 if word in self.lexicon.keys():
                     parsed_line.append(self.lexicon[word])
                 else:
                     parsed_line.append(UNK)
                 if word == '<END>':
+                    sentence_ct += 1
                     self.token_stream.append(parsed_line)
                     parsed_line = []
-        print len(self.token_stream)
+        print "num_words: " + str(word_ct)
+        print "num_sentences: " + str(sentence_ct)
         self.token_stream, self.mask_sequence_stream = self.pre_process_sentences()
 
     def next_batch(self):
