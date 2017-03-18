@@ -16,7 +16,7 @@ def preprocess_penn(data_file, max_length, is_eval=False):
             line = line.strip()
             tup = line.split()
             if len(tup) == 0: 
-                if len(sentence) <= max_length:
+                if len(sentence) <= max_length - 1:
                     sentence.append('<END>')
                     for word in sentence: 
                         write_tokens.write(word + '\n')
