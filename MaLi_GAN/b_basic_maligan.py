@@ -19,26 +19,17 @@ batch_size = 32
 embedding_size = 300
 n_classes = 2
 
-
-
-# populate the lexicon of existing words
-lexicon = {}
-
 # load real data
 positive_file = 'save/real_data.txt'
-data_loader = dl(N, batch_size, True, positive_file)
+pos_dl = dl(N, batch_size, True, positive_file)
 
 eval_file = 'save/eval_data.txt'
 eval_dl = dl(N, batch_size, True, eval_file)
-#print "Loading data from " + positive_file + " into memory..."
-#positive_data = data_loader.load_data(positive_file)
 
-pretrained_embeddings = tf.get_variable('embeddings', initializer=tf.random_normal([5000, 300]))
+with tf.variable_scope('embeddings'):
+    pretrained_embeddings = tf.get_variable('embeddings', initializer=tf.random_normal([5000, 300]))
 
 # initialize generator and discriminator
-#target_params = cPickle.load(open('save/target_params.pkl'))
-#target_lstm = TARGET_LSTM(5000, batch_size, 32, 32, 20, 0, target_params)   
-
 with tf.variable_scope('generator'):
     gen = Generator(5000, batch_size, 300, 150, T, 0, 20, pretrained_embeddings)
 with tf.variable_scope('discriminator'):
@@ -49,19 +40,23 @@ gensaver = tf.train.Saver([param for param in tf.trainable_variables() if 'gener
 sess = tf.Session()
 sess.run(tf.global_variables_initializer())
 
-gensaver.restore(sess, './test1/pretrained_eval')
-'''# pretrain 
-losses = []
-for i in range(50):
-    epoch_loss = gen.pretrain_one_epoch(sess, data_loader)
-    print epoch_loss
-    losses.append(epoch_loss)
-    #tloss = target_lstm.target_loss(sess, gen, batch_size, data_loader)
-    #print 'tloss: ' + str(tloss)
+#gensaver.restore(sess, './test1/pretrained_eval')
+# pretrain 
+perps = []
+for i in range(500):
+    gen.pretrain_one_epoch(sess, pos_dl)
+    if i % 5 == 0:
+        perp = gen.get_perplexity(sess, eval_dl)
+        print perp
+        perps.append(perp)
 
-with open('pretrain_losses.txt', 'w') as f:
-    cPickle.dump(losses, f)
-saver.save(sess, 'pretrained')'''
+        with open(TIME + '/pretrain_perplexities.txt', 'w') as f:
+            cPickle.dump(perps, f)
+        saver.save(sess, './'+TIME + '/pretrained')
+
+with open(TIME + '/pretrain_perplexities.txt', 'w') as f:
+    cPickle.dump(perps, f)
+saver.save(sess, './'+TIME+'/pretrained')
 
 
 #gensaver = tf.train.Saver([param for param in tf.trainable_variables() if 'generator' in param.name])
@@ -75,7 +70,7 @@ acc = []
 for _ in range(100):
     accuracies=[]
     for i in range(100):
-        real_minibatch, _ = data_loader.next_batch()
+        real_minibatch, _ = pos_dl.next_batch()
         gen_minibatch = gen.generate(sess, batch_size)
         loss, accuracy, output = dis.train_one_step(sess, real_minibatch, gen_minibatch)
         accuracies.append(accuracy)
@@ -85,7 +80,8 @@ for _ in range(100):
     if mean_acc > 0.8:
         break
 
-perps = []
+saver.save(sess, './'+TIME+'/pretrained_disc')
+
 perp = gen.get_perplexity(sess, eval_dl)
 perps.append(perp)
 print 'perp: ' + str(perp)
@@ -93,7 +89,7 @@ print 'perp: ' + str(perp)
 for _ in range(100):
     # print 'discriminator...'
     # for i in range(k):
-    #     real_minibatch, _ = data_loader.next_batch()
+    #     real_minibatch, _ = pos_dl.next_batch()
     #     gen_minibatch = gen.generate(sess, batch_size)
     #     loss, accuracy, output = dis.train_one_step(sess, real_minibatch, gen_minibatch)
     #     acc.append(accuracy)
@@ -104,15 +100,17 @@ for _ in range(100):
         loss, partial = gen.train_one_step(sess, dis, gen_minibatch)
 
         gen_minibatch = gen.generate(sess, 32)
-        real_minibatch, _ = data_loader.next_batch()
-        dis.get_accuracy(sess, real_minibatch, gen_minibatch)
+        real_minibatch, _ = pos_dl.next_batch()
+        acc = dis.get_accuracy(sess, real_minibatch, gen_minibatch)
+        accuracies.append(acc)
+        print 'acc: ' + str(acc)
 
     perp = gen.get_perplexity(sess, eval_dl)
     print 'perp: ' + str(perp)
     perps.append(perp)
     with open(TIME + '/accuracies.txt', 'w') as f:
         cPickle.dump(acc, f)
-    with open('eval_perps.txt', 'w') as f:
+    with open(TIME + '/eval_perps.txt', 'w') as f:
         cPickle.dump(perps, f)
     saver.save(sess, './'+TIME +'/trained')
 
