@@ -37,7 +37,7 @@ class Generator(object):
 
         # maligan functions
         self.train_loss = self.add_train_loss()
-        self.train_op = self.add_train_op(self.train_loss, .01)
+        self.train_op = self.add_train_op(self.train_loss, .0001)
         
     ###### Client functions ###################################################################
     def pretrain_one_step(self, sess, input_x, input_mask):
