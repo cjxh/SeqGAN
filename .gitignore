@@ -2,6 +2,6 @@
 .env/*
 *.pyc
 *.swp
-MaLi_GAN/data/*.txt
-MaLi_GAN/data/*.npy
-MaLi_GAN/data/*.conll
+data/glove/*
+data/raw_data/*
+data/penn_treebank/*
