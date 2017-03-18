@@ -44,22 +44,28 @@ if not os.path.exists('./'+TIME):
     os.makedirs('./'+TIME)
 
 #gensaver.restore(sess, './test1/pretrained_eval')
-# pretrain 
-perps = []
-for i in range(500):
-    gen.pretrain_one_epoch(sess, pos_dl)
-    if i % 5 == 0:
-        perp = gen.get_perplexity(sess, eval_dl)
-        print perp
-        perps.append(perp)
+# pretrain
+pretrained = True
+if pretrained:
+    oldtime = '20170318-004737'
+    perps = cPickle.load(open('./'+oldtime+'/pretrain_perplexities.txt'))
+    saver.restore(sess, './'+oldtime+'/pretrained')
+else:
+    perps = []
+    for i in range(500):
+        gen.pretrain_one_epoch(sess, pos_dl)
+        if i % 5 == 0:
+            perp = gen.get_perplexity(sess, eval_dl)
+            print perp
+            perps.append(perp)
 
-        with open(TIME + '/pretrain_perplexities.txt', 'w') as f:
-            cPickle.dump(perps, f)
-        saver.save(sess, './'+TIME + '/pretrained')
+            with open(TIME + '/pretrain_perplexities.txt', 'w') as f:
+                cPickle.dump(perps, f)
+            saver.save(sess, './'+TIME + '/pretrained')
 
-with open(TIME + '/pretrain_perplexities.txt', 'w') as f:
-    cPickle.dump(perps, f)
-saver.save(sess, './'+TIME+'/pretrained')
+    with open(TIME + '/pretrain_perplexities.txt', 'w') as f:
+        cPickle.dump(perps, f)
+    saver.save(sess, './'+TIME+'/pretrained')
 
 
 #gensaver = tf.train.Saver([param for param in tf.trainable_variables() if 'generator' in param.name])
