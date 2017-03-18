@@ -68,8 +68,7 @@ class DataLoader(object):
                 else:
                     parsed_line.append(UNK)
                 if word == '<END>':
-                    if len(parsed_line) <= self.max_length:
-                        self.token_stream.append(parsed_line)
+                    self.token_stream.append(parsed_line)
                     parsed_line = []
         print len(self.token_stream)
         self.token_stream, self.mask_sequence_stream = self.pre_process_sentences()
