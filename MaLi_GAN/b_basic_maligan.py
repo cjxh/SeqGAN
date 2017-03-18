@@ -98,7 +98,7 @@ perp = gen.get_perplexity(sess, eval_dl)
 perps.append(perp)
 print 'perp: ' + str(perp)
 
-for _ in range(100):
+for _ in range(10000):
     # print 'discriminator...'
     # for i in range(k):
     #     real_minibatch, _ = pos_dl.next_batch()
@@ -113,9 +113,9 @@ for _ in range(100):
 
         gen_minibatch = gen.generate(sess, 32)
         real_minibatch, _ = pos_dl.next_batch()
-        acc = dis.get_accuracy(sess, real_minibatch, gen_minibatch)
-        accuracies.append(acc)
-        print 'acc: ' + str(acc)
+        accuracy = dis.get_accuracy(sess, real_minibatch, gen_minibatch)
+        acc.append(accuracy)
+        print 'acc: ' + str(accuracy)
 
     perp = gen.get_perplexity(sess, eval_dl)
     print 'perp: ' + str(perp)
