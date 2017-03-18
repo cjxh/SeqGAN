@@ -1,2 +1,2 @@
-model_checkpoint_path: "trained_e"
-all_model_checkpoint_paths: "trained_e"
+model_checkpoint_path: "pretrained"
+all_model_checkpoint_paths: "pretrained"
