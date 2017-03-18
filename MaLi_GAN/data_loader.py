@@ -98,12 +98,10 @@ class DataLoader(object):
         return shuffled_data, shuffled_mask
 
     def mini_batch(self, batch_size):
-        print 'number of sentences: ' + str(len(self.token_stream))
         self.num_batch = len(self.token_stream) / batch_size
         shuffled_stream, shuffled_mask = self.shuffle_sentences()
         shuffled_stream = shuffled_stream[:self.num_batch * batch_size]
         shuffled_mask = shuffled_mask[:self.num_batch * batch_size]
-        print 'num_batch = ' + str(self.num_batch)
         self.mini_batches = np.split(np.array(shuffled_stream), self.num_batch, 0)
         self.mini_batches_mask = np.split(np.array(shuffled_mask), self.num_batch, 0)
         self.pointer = 0
