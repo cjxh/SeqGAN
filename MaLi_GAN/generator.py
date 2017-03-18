@@ -37,7 +37,7 @@ class Generator(object):
 
         # maligan functions
         self.train_loss = self.add_train_loss()
-        self.train_op = self.add_train_op(self.train_loss, .0001)
+        self.train_op = self.add_train_op(self.train_loss, .001)
         
     ###### Client functions ###################################################################
     def pretrain_one_step(self, sess, input_x, input_mask):
@@ -94,7 +94,8 @@ class Generator(object):
         denom = np.sum(rewards)
         #print np.mean(rewards)
         #denom = denom.reshape((np.shape(denom)[0], 1))
-        rewards = np.divide(rewards, denom) - self.baseline
+        baseline = 1.0/(rewards.shape[0])
+        rewards = np.divide(rewards, denom) - baseline
         #rewards = np.reshape(norm_rewards, (-1))
         feed = {self.x: xij, self.rewards: rewards}
         outputs = sess.run([self.train_op, self.train_loss, self.partial], feed)
@@ -124,7 +125,7 @@ class Generator(object):
         self.rewards = tf.placeholder(tf.float32, shape=[None, 1])
 
     def add_train_op(self, loss, lr):
-        optimizer = tf.train.GradientDescentOptimizer(lr)
+        optimizer = tf.train.AdamOptimizer(lr)
         return optimizer.minimize(loss)
         '''grads_and_vars = optimizer.compute_gradients(loss)
         grads_and_vars = zip(*grads_and_vars)

@@ -13,6 +13,20 @@ batch_size = 64
 embedding_size = 300
 vocab_size = 5000
 
+def create_lexicon(file_name):
+    counter = 0
+    lexicon = {}
+    with open('../data/glove/' + file_name, 'r') as f:
+        print "Pre-processing and saving word lexicon in memory..."
+        for word in tqdm(f):
+            word = word.strip()
+            lexicon[word] = counter
+            counter += 1
+    print len(lexicon.keys())
+    return lexicon
+
+lexicon = create_lexicon('trimmed_word_lexicon.txt')
+
 # load real data
 positive_file = 'data/preprocessed_train_sentences.txt'
 pos_dl = dl(seqlen, batch_size, False, positive_file)
