@@ -45,7 +45,7 @@ if not os.path.exists('./'+TIME):
 
 #gensaver.restore(sess, './test1/pretrained_eval')
 # pretrain
-pretrained = True
+pretrained = False
 if pretrained:
     oldtime = '20170318-004737'
     perps = cPickle.load(open('./'+oldtime+'/pretrain_perplexities.txt'))
@@ -54,11 +54,11 @@ else:
     perps = []
     for i in range(500):
         gen.pretrain_one_epoch(sess, pos_dl)
-        if i % 5 == 0:
-            perp = gen.get_perplexity(sess, eval_dl)
-            print perp
-            perps.append(perp)
+        perp = gen.get_perplexity(sess, eval_dl)
+        print perp
+        perps.append(perp)
 
+        if i % 5 == 0:
             with open(TIME + '/pretrain_perplexities.txt', 'w') as f:
                 cPickle.dump(perps, f)
             saver.save(sess, './'+TIME + '/pretrained')
@@ -72,7 +72,7 @@ else:
 #gensaver.restore(sess, './pretrained')
 #saver.restore(sess, './trained')
 
-dpretrained = True
+dpretrained = False
 if dpretrained:
     acc = []
     saver.restore(sess, './20170318-011742/pretrained_disc')
@@ -90,21 +90,22 @@ else:
         acc.append(mean_acc)
         if mean_acc > 0.8:
             break
+
     with open(TIME + '/pretrain_accuracies.txt', 'w') as f:
         cPickle.dump(acc, f)
-        saver.save(sess, './'+TIME+'/pretrained_disc')
+    saver.save(sess, './'+TIME+'/pretrained_disc')
 
 perp = gen.get_perplexity(sess, eval_dl)
 perps.append(perp)
 print 'perp: ' + str(perp)
 
 for _ in range(10000):
-    # print 'discriminator...'
-    # for i in range(k):
-    #     real_minibatch, _ = pos_dl.next_batch()
-    #     gen_minibatch = gen.generate(sess, batch_size)
-    #     loss, accuracy, output = dis.train_one_step(sess, real_minibatch, gen_minibatch)
-    #     acc.append(accuracy)
+    print 'discriminator...'
+    for i in range(k):
+        real_minibatch, _ = pos_dl.next_batch()
+        gen_minibatch = gen.generate(sess, batch_size)
+        loss, accuracy, output = dis.train_one_step(sess, real_minibatch, gen_minibatch)
+        acc.append(accuracy)
 
     print 'generator...'
     for i in range(5):
