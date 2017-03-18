@@ -125,7 +125,7 @@ class Generator(object):
         self.rewards = tf.placeholder(tf.float32, shape=[None, 1])
 
     def add_train_op(self, loss, lr):
-        optimizer = tf.train.AdamOptimizer(lr)
+        optimizer = tf.train.GradientDescentOptimizer(lr)
         return optimizer.minimize(loss)
         '''grads_and_vars = optimizer.compute_gradients(loss)
         grads_and_vars = zip(*grads_and_vars)
