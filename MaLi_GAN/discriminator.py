@@ -21,20 +21,22 @@ class Discriminator(object):
         self.train_op = dis_optimizer.minimize(self.loss)
 
     ### client functions ###
+    def get_accuracy(self, sess, x_real, x_fake):
+        shuffled_x, shuffled_y = self.get_shuffled_xy(x_real, x_fake)
+        feed = {
+            self.input_x: shuffled_x,
+            self.input_y: shuffled_y,
+            self.dropout_keep_prob: 1
+        }
+        accuracy = sess.run(self.accuracy, feed)
+        return accuracy
+
     def get_predictions(self, sess, x):
         feed = {self.input_x: x}
         return sess.run(self.outputs, feed)
         
     def train_one_step(self, sess, x_real, x_fake):
-        dis_x_train = np.concatenate((x_real, x_fake), axis=0)
-
-        y_real = [[0, 1] for _ in x_real]
-        y_fake = [[1, 0] for _ in x_fake]
-        dis_y_train = np.concatenate((y_real, y_fake), axis=0)
-
-        shuffle_idx = np.random.permutation(np.arange(len(dis_y_train)))
-        shuffled_x =  dis_x_train[shuffle_idx]
-        shuffled_y =  dis_y_train[shuffle_idx]
+        shuffled_x, shuffled_y = self.get_shuffled_xy(x_real, x_fake)
     
         feed = {
             self.input_x: shuffled_x,
@@ -43,7 +45,18 @@ class Discriminator(object):
         }
         _, loss, accuracy, output = sess.run([self.train_op, self.loss, self.accuracy, self.outputs], feed)
         return loss, accuracy, output
+
     ########################
+
+    def get_shuffled_xy(self, x_real, x_fake):
+        dis_x_train = np.concatenate((x_real, x_fake), axis=0)
+
+        y_real = [[0, 1] for _ in x_real]
+        y_fake = [[1, 0] for _ in x_fake]
+        dis_y_train = np.concatenate((y_real, y_fake), axis=0)
+
+        shuffle_idx = np.random.permutation(np.arange(len(dis_y_train)))
+        return dis_x_train[shuffle_idx], dis_y_train[shuffle_idx]
 
     def add_placeholders(self):
         self.input_x = tf.placeholder(tf.int32, shape=[None, self.sequence_length])
