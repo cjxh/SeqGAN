@@ -72,21 +72,27 @@ else:
 #gensaver.restore(sess, './pretrained')
 #saver.restore(sess, './trained')
 
-acc = []
-for _ in range(100):
-    accuracies=[]
-    for i in range(100):
-        real_minibatch, _ = pos_dl.next_batch()
-        gen_minibatch = gen.generate(sess, batch_size)
-        loss, accuracy, output = dis.train_one_step(sess, real_minibatch, gen_minibatch)
-        accuracies.append(accuracy)
-    mean_acc =  np.mean(accuracies)
-    print mean_acc
-    acc.append(mean_acc)
-    if mean_acc > 0.8:
-        break
-
-saver.save(sess, './'+TIME+'/pretrained_disc')
+dpretrained = True
+if dpretrained:
+    acc = []
+    saver.restore(sess, './20170318-011742/pretrained_disc')
+else:
+    acc = []
+    for _ in range(100):
+        accuracies=[]
+        for i in range(100):
+            real_minibatch, _ = pos_dl.next_batch()
+            gen_minibatch = gen.generate(sess, batch_size)
+            loss, accuracy, output = dis.train_one_step(sess, real_minibatch, gen_minibatch)
+            accuracies.append(accuracy)
+        mean_acc =  np.mean(accuracies)
+        print mean_acc
+        acc.append(mean_acc)
+        if mean_acc > 0.8:
+            break
+    with open(TIME + '/pretrain_accuracies.txt', 'w') as f:
+        cPickle.dump(acc, f)
+        saver.save(sess, './'+TIME+'/pretrained_disc')
 
 perp = gen.get_perplexity(sess, eval_dl)
 perps.append(perp)
