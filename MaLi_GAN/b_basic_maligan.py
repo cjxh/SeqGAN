@@ -40,6 +40,9 @@ gensaver = tf.train.Saver([param for param in tf.trainable_variables() if 'gener
 sess = tf.Session()
 sess.run(tf.global_variables_initializer())
 
+if not os.path.exists('./'+TIME):
+    os.makedirs('./'+TIME)
+
 #gensaver.restore(sess, './test1/pretrained_eval')
 # pretrain 
 perps = []
@@ -62,9 +65,6 @@ saver.save(sess, './'+TIME+'/pretrained')
 #gensaver = tf.train.Saver([param for param in tf.trainable_variables() if 'generator' in param.name])
 #gensaver.restore(sess, './pretrained')
 #saver.restore(sess, './trained')
-
-if not os.path.exists('./'+TIME):
-    os.makedirs('./'+TIME)
 
 acc = []
 for _ in range(100):
