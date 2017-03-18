@@ -26,6 +26,10 @@ def preprocess_penn(data_file, max_length, is_eval=False):
                 word_frequency[tup[1]] += 1
     write_tokens.close()
     if not is_eval:
+        del word_frequency['<START>']
+        if '<UNK>' in word_frequency.keys():
+            del word_frequency['<UNK>']
+        del word_frequency['<END>']
         all_words = set(sorted(word_frequency, key=word_frequency.get, reverse=True)[:10000])
         return all_words
 
@@ -46,6 +50,8 @@ def trim_glove_and_lexicon(all_words, lexicon_file, glove_file, emb_size):
     embeddings = np.load('glove/' + glove_file)
     new_lexicon = {'<START>': START, '<UNK>': UNK, '<END>': END}
     new_embeddings = []
+    new_embeddings.append([0] * emb_size)
+    new_embeddings.append([0] * emb_size)
     new_embeddings.append([0] * emb_size)
     counter = 3
     print "Trimming glove vectors and lexicon..."
