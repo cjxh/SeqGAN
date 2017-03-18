@@ -6,113 +6,124 @@ from generator import Generator
 from discriminator import Discriminator
 import cPickle
 from target_lstm import TARGET_LSTM
+import time, os
+TIME = time.strftime('%Y%m%d-%H%M%S')
 
 # initialize constants
 T = 20
 N = T
 K = 1
-k = 100
+k = 10
 DROPOUT_KEEP_PROB = 0.75
 batch_size = 32
 embedding_size = 300
 n_classes = 2
 
-# populate the lexicon of existing words
-lexicon = {}
-
 # load real data
 positive_file = 'save/real_data.txt'
-data_loader = dl(lexicon, N, batch_size)
-print "Loading data from " + positive_file + " into memory..."
-positive_data = data_loader.load_data(positive_file)
+pos_dl = dl(N, batch_size, True, positive_file)
 
-pretrained_embeddings = tf.get_variable('embeddings', initializer=tf.random_normal([5000, 300]))
+eval_file = 'save/eval_data.txt'
+eval_dl = dl(N, batch_size, True, eval_file)
+
+with tf.variable_scope('embeddings'):
+    pretrained_embeddings = tf.get_variable('embeddings', initializer=tf.random_normal([5000, 300]))
 
 # initialize generator and discriminator
-target_params = cPickle.load(open('save/target_params.pkl'))
-target_lstm = TARGET_LSTM(5000, batch_size, 32, 32, 20, 0, target_params)   
-
 with tf.variable_scope('generator'):
     gen = Generator(5000, batch_size, 300, 150, T, 0, 20, pretrained_embeddings)
 with tf.variable_scope('discriminator'):
-    dis = Discriminator(N, batch_size, n_classes, pretrained_embeddings)
+    dis = Discriminator(N, batch_size, pretrained_embeddings)
 
 saver = tf.train.Saver()
+gensaver = tf.train.Saver([param for param in tf.trainable_variables() if 'generator' in param.name or 'embeddings' in param.name] )
 sess = tf.Session()
 sess.run(tf.global_variables_initializer())
 
-# pretrain 
-losses = []
-for i in range(50):
-    epoch_loss = gen.pretrain_one_epoch(sess, data_loader)
-    print epoch_loss
-    losses.append(epoch_loss)
-    #tloss = target_lstm.target_loss(sess, gen, batch_size, data_loader)
-    #print 'tloss: ' + str(tloss)
+if not os.path.exists('./'+TIME):
+    os.makedirs('./'+TIME)
 
-with open('pretrain_losses.txt', 'w') as f:
-    cPickle.dump(losses, f)
-saver.save(sess, 'pretrained')
+#gensaver.restore(sess, './test1/pretrained_eval')
+# pretrain
+pretrained = True
+if pretrained:
+    oldtime = '20170318-004737'
+    perps = cPickle.load(open('./'+oldtime+'/pretrain_perplexities.txt'))
+    saver.restore(sess, './'+oldtime+'/pretrained')
+else:
+    perps = []
+    for i in range(500):
+        gen.pretrain_one_epoch(sess, pos_dl)
+        if i % 5 == 0:
+            perp = gen.get_perplexity(sess, eval_dl)
+            print perp
+            perps.append(perp)
+
+            with open(TIME + '/pretrain_perplexities.txt', 'w') as f:
+                cPickle.dump(perps, f)
+            saver.save(sess, './'+TIME + '/pretrained')
+
+    with open(TIME + '/pretrain_perplexities.txt', 'w') as f:
+        cPickle.dump(perps, f)
+    saver.save(sess, './'+TIME+'/pretrained')
 
 
 #gensaver = tf.train.Saver([param for param in tf.trainable_variables() if 'generator' in param.name])
 #gensaver.restore(sess, './pretrained')
 #saver.restore(sess, './trained')
 
-'''for _ in range(10):
+acc = []
+for _ in range(100):
     accuracies=[]
-    for i in range(k):
-        real_minibatch = data_loader.next_batch()
+    for i in range(100):
+        real_minibatch, _ = pos_dl.next_batch()
         gen_minibatch = gen.generate(sess, batch_size)
         loss, accuracy, output = dis.train_one_step(sess, real_minibatch, gen_minibatch)
-        #print 'dis loss: ' + str(loss) + ', dis accuracy' + str(accuracy)
         accuracies.append(accuracy)
-    print np.mean(accuracies)'''
+    mean_acc =  np.mean(accuracies)
+    print mean_acc
+    acc.append(mean_acc)
+    if mean_acc > 0.8:
+        break
 
-tlosses = []
-tloss = target_lstm.target_loss(sess, gen, batch_size, data_loader)
-tlosses.append(tloss)
-print 'tloss: ' + str(tloss)
+saver.save(sess, './'+TIME+'/pretrained_disc')
 
-acc = []
-for _ in range(10):
-    print 'discriminator...'
-    for _ in range(100):
-        accuracies=[]
-        for i in range(k):
-            real_minibatch = data_loader.next_batch()
-            gen_minibatch = gen.generate(sess, batch_size)
-            loss, accuracy, output = dis.train_one_step(sess, real_minibatch, gen_minibatch)
-            #print 'dis loss: ' + str(loss) + ', dis accuracy' + str(accuracy)
-            accuracies.append(accuracy)
-            #print accuracy
-        mean_acc =  np.mean(accuracies)
-        print mean_acc
-        acc.append(mean_acc)
-        if mean_acc > 0.8:
-            break
+perp = gen.get_perplexity(sess, eval_dl)
+perps.append(perp)
+print 'perp: ' + str(perp)
 
-    print 'generator....'
-    for _ in range(10):
-        losses=[]
-        for i in range(5):
-            gen_minibatch = gen.generate(sess, 128)
-            loss, partial = gen.train_one_step(sess, dis, gen_minibatch)
-            losses.append(loss)
-        print np.mean(losses)
+for _ in range(100):
+    # print 'discriminator...'
+    # for i in range(k):
+    #     real_minibatch, _ = pos_dl.next_batch()
+    #     gen_minibatch = gen.generate(sess, batch_size)
+    #     loss, accuracy, output = dis.train_one_step(sess, real_minibatch, gen_minibatch)
+    #     acc.append(accuracy)
 
-    tloss = target_lstm.target_loss(sess, gen, batch_size, data_loader)
-    print 'tloss: ' + str(tloss)
-    tlosses.append(tloss)
-    with open('accuracies3.txt', 'w') as f:
+    print 'generator...'
+    for i in range(5):
+        gen_minibatch = gen.generate(sess, 32)
+        loss, partial = gen.train_one_step(sess, dis, gen_minibatch)
+
+        gen_minibatch = gen.generate(sess, 32)
+        real_minibatch, _ = pos_dl.next_batch()
+        acc = dis.get_accuracy(sess, real_minibatch, gen_minibatch)
+        accuracies.append(acc)
+        print 'acc: ' + str(acc)
+
+    perp = gen.get_perplexity(sess, eval_dl)
+    print 'perp: ' + str(perp)
+    perps.append(perp)
+    with open(TIME + '/accuracies.txt', 'w') as f:
         cPickle.dump(acc, f)
-    with open('eval_losses3.txt', 'w') as f:
-        cPickle.dump(tlosses, f)
+    with open(TIME + '/eval_perps.txt', 'w') as f:
+        cPickle.dump(perps, f)
+    saver.save(sess, './'+TIME +'/trained')
 
-with open('accuracies3.txt', 'w') as f:
+with open(TIME + '/accuracies.txt', 'w') as f:
     cPickle.dump(acc, f)
 
-with open('eval_losses3.txt', 'w') as f:
-    cPickle.dump(tlosses, f)
+with open(TIME + '/eval_perps.txt', 'w') as f:
+    cPickle.dump(perps, f)
 
-saver.save(sess, 'trained')
+saver.save(sess, './'+TIME +'/trained')
