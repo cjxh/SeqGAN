@@ -55,9 +55,22 @@ class Generator(object):
             g_loss = self.pretrain_one_step(sess, batch, mask_batch)
             supervised_g_losses.append(g_loss)
 
-        return np.mean(supervised_g_losses)
+        loss = np.mean(supervised_g_losses)
+        return np.exp(loss)
 
     def get_perplexity(self, sess, data_loader):
+        upervised_g_losses = []
+        data_loader.reset_pointer()
+
+        for it in xrange(data_loader.num_batch):
+            batch, mask_batch = data_loader.next_batch()
+            feed = {self.x: input_x, self.mask : input_mask}
+            g_loss = sess.run(self.pretrain_loss, feed_dict=feed)
+            supervised_g_losses.append(g_loss)
+
+        loss = np.mean(supervised_g_losses)
+        return np.exp(loss)
+
         return np.exp(self.pretrain_one_epoch(sess, data_loader))
 
     def generate_from_latch(self, sess, input_x, N):
