@@ -1,7 +1,5 @@
 import tensorflow as tf
-import numpy as np
 from tensorflow.python.ops import tensor_array_ops, control_flow_ops
-import dill
 
 
 class LSTM(object):
@@ -30,7 +28,7 @@ class LSTM(object):
             self.g_output_unit = self.create_output_unit(self.g_params)  # maps h_t to o_t (output token logits)
 
         # placeholder definition
-        self.x = tf.placeholder(tf.int32, shape=[None, self.sequence_length])
+        self.x = tf.placeholder(tf.int32, shape=[self.batch_size, self.sequence_length])
         # sequence of indices of true data, not including start token
 
         self.rewards = tf.placeholder(tf.float32, shape=[self.batch_size, self.sequence_length])
@@ -38,12 +36,12 @@ class LSTM(object):
 
         # processed for batch
         with tf.device("/cpu:0"):
-            inputs = tf.split(tf.nn.embedding_lookup(self.g_embeddings, self.x), self.sequence_length, 1)
-            self.processed_x = tf.stack(
+            inputs = tf.split(1, self.sequence_length, tf.nn.embedding_lookup(self.g_embeddings, self.x))
+            self.processed_x = tf.pack(
                 [tf.squeeze(input_, [1]) for input_ in inputs])  # seq_length x batch_size x emb_dim
 
         self.h0 = tf.zeros([self.batch_size, self.hidden_dim])
-        self.h0 = tf.stack([self.h0, self.h0])
+        self.h0 = tf.pack([self.h0, self.h0])
 
         gen_o = tensor_array_ops.TensorArray(dtype=tf.float32, size=self.sequence_length,
                                              dynamic_size=False, infer_shape=True)
@@ -56,7 +54,7 @@ class LSTM(object):
             log_prob = tf.log(tf.nn.softmax(o_t))
             next_token = tf.cast(tf.reshape(tf.multinomial(log_prob, 1), [self.batch_size]), tf.int32)
             x_tp1 = tf.nn.embedding_lookup(self.g_embeddings, next_token)  # batch x emb_dim
-            gen_o = gen_o.write(i, tf.reduce_sum(tf.multiply(tf.one_hot(next_token, self.num_emb, 1.0, 0.0),
+            gen_o = gen_o.write(i, tf.reduce_sum(tf.mul(tf.one_hot(next_token, self.num_emb, 1.0, 0.0),
                                                         tf.nn.softmax(o_t)), 1))  # [batch_size] , prob
             gen_x = gen_x.write(i, next_token)  # indices, batch_size
             return i + 1, x_tp1, h_t, gen_o, gen_x
@@ -67,7 +65,7 @@ class LSTM(object):
             loop_vars=(tf.constant(0, dtype=tf.int32),
                        tf.nn.embedding_lookup(self.g_embeddings, self.start_token), self.h0, gen_o, gen_x))
 
-        self.gen_x = self.gen_x.stack()  # seq_length x batch_size
+        self.gen_x = self.gen_x.pack()  # seq_length x batch_size
         self.gen_x = tf.transpose(self.gen_x, perm=[1, 0])  # batch_size x seq_length
 
         # supervised pretraining for generator
@@ -77,7 +75,7 @@ class LSTM(object):
 
         ta_emb_x = tensor_array_ops.TensorArray(
             dtype=tf.float32, size=self.sequence_length)
-        ta_emb_x = ta_emb_x.unstack(self.processed_x)
+        ta_emb_x = ta_emb_x.unpack(self.processed_x)
 
         def _pretrain_recurrence(i, x_t, h_tm1, g_predictions):
             h_t = self.g_recurrent_unit(x_t, h_tm1)
@@ -94,14 +92,14 @@ class LSTM(object):
                        self.h0, g_predictions))
 
         self.g_predictions = tf.transpose(
-            self.g_predictions.stack(), perm=[1, 0, 2])  # batch_size x seq_length x vocab_size
+            self.g_predictions.pack(), perm=[1, 0, 2])  # batch_size x seq_length x vocab_size
 
         # pretraining loss
         self.pretrain_loss = -tf.reduce_sum(
             tf.one_hot(tf.to_int32(tf.reshape(self.x, [-1])), self.num_emb, 1.0, 0.0) * tf.log(
                 tf.clip_by_value(tf.reshape(self.g_predictions, [-1, self.num_emb]), 1e-20, 1.0)
             )
-        ) /(self.sequence_length * self.batch_size)
+        ) / (self.sequence_length * self.batch_size)
 
         # training updates
         pretrain_opt = self.g_optimizer(self.learning_rate)
@@ -165,7 +163,7 @@ class LSTM(object):
             self.Wc, self.Uc, self.bc])
 
         def unit(x, hidden_memory_tm1):
-            previous_hidden_state, c_prev = tf.unstack(hidden_memory_tm1)
+            previous_hidden_state, c_prev = tf.unpack(hidden_memory_tm1)
 
             # Input Gate
             i = tf.sigmoid(
@@ -197,7 +195,7 @@ class LSTM(object):
             # Current Hidden state
             current_hidden_state = o * tf.nn.tanh(c)
 
-            return tf.stack([current_hidden_state, c])
+            return tf.pack([current_hidden_state, c])
 
         return unit
 
@@ -207,7 +205,7 @@ class LSTM(object):
         params.extend([self.Wo, self.bo])
 
         def unit(hidden_memory_tuple):
-            hidden_state, c_prev = tf.unstack(hidden_memory_tuple)
+            hidden_state, c_prev = tf.unpack(hidden_memory_tuple)
             # hidden_state : batch x hidden_dim
             logits = tf.matmul(hidden_state, self.Wo) + self.bo
             # output = tf.nn.softmax(logits)
@@ -218,6 +216,3 @@ class LSTM(object):
     def g_optimizer(self, *args, **kwargs):
         return tf.train.GradientDescentOptimizer(*args, **kwargs)
 
-    def save(self, filename):
-        with open(filename, 'w') as f:
-            dill.dump(self, f, -1)
