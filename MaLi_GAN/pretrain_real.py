@@ -4,7 +4,7 @@ from data_loader import DataLoader as dl
 from tqdm import tqdm
 from generator import Generator
 from discriminator import Discriminator
-import cPickle
+import cPickle as pickle
 
 # initialize constants
 seqlen = 35
@@ -12,26 +12,16 @@ DROPOUT_KEEP_PROB = 0.75
 batch_size = 64
 embedding_size = 300
 
-def create_lexicon(file_name):
-    counter = 0
-    lexicon = {}
-    with open('../data/glove/' + file_name, 'r') as f:
-        print "Pre-processing and saving word lexicon in memory..."
-        for word in tqdm(f):
-            word = word.strip()
-            lexicon[word] = counter
-            counter += 1
-    return lexicon
-
-lexicon = create_lexicon('trimmed_word_lexicon.txt')
+lexicon = pickle.load(open('../data/glove/trimmed_word_lexicon.p', 'r'))
+print lexicon
 vocab_size = len(lexicon.keys()) 
 
 # load real data
 positive_file = '../data/preprocessed_data/train.txt'
-pos_dl = dl(seqlen, batch_size, False, positive_file)
+pos_dl = dl(seqlen, batch_size, False, positive_file, lexicon)
 
 eval_file = '../data/preprocessed_data/eval.txt'
-eval_dl = dl(seqlen, batch_size, False, eval_file)
+eval_dl = dl(seqlen, batch_size, False, eval_file, lexicon)
 
 #pretrained_embeddings = tf.get_variable('embeddings', initializer=tf.random_normal([vocab_size, embedding_size]))
 pretrained_embeddings = tf.get_variable('embeddings', initializer=np.load('../data/glove/trimmed_glove_vectors.npy'))
