@@ -140,10 +140,10 @@ def main():
     sess = tf.Session(config=config)
     sess.run(tf.global_variables_initializer())
 
-    generate_samples(sess, target_lstm, 64, 10000, positive_file)
+    #generate_samples(sess, target_lstm, 64, 10000, positive_file)
     gen_data_loader.create_batches(positive_file)
 
-    generate_samples(sess, target_lstm, 64, 7000, eval_file)
+    #generate_samples(sess, target_lstm, 64, 7000, eval_file)
 <<<<<<< HEAD
     likelihood_data_loader.create_batches(eval_file)
 
@@ -151,7 +151,7 @@ def main():
         os.makedirs('./data/'+TIME)
 
     #  pre-train generator
-    pretrained = False
+    pretrained = True
     if pretrained:
         oldtime = '20170318-004737'
         perps = cPickle.load(open('./data/'+oldtime+'/pretrain_perps_150.txt'))
@@ -184,6 +184,7 @@ def main():
         pass
     else:
         print 'Start training discriminator...'
+        acc = []
         for _ in range(dis_alter_epoch):
             generate_samples(sess, generator, BATCH_SIZE, generated_num, negative_file)
 
@@ -192,6 +193,13 @@ def main():
             dis_batches = dis_data_loader.batch_iter(
                 zip(dis_x_train, dis_y_train), dis_batch_size, dis_num_epochs
             )
+           
+            accuracy = sess.run(cnn.accuracy, {cnn.input_x: dis_x_train, cnn.input_y: dis_y_train, cnn.dropout_keep_prob: dis_dropout_keep_prob})
+
+            acc.append(accuracy)
+        with open('./data/'+TIME+'/dpretrained_acc.txt', 'w') as f:
+            cPickle.dump(acc, f)
+        saver.save(sess, './data/'+TIME+'/dpretrained')
 
 =======
     gen_data_loader.create_batches(eval_file)
