@@ -1,0 +1,3 @@
+model_checkpoint_path: "pretrained_60"
+all_model_checkpoint_paths: "pretrained_30"
+all_model_checkpoint_paths: "pretrained_60"
