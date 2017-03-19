@@ -9,6 +9,8 @@ from text_classifier import TextCNN
 from rollout import ROLLOUT
 from target_lstm import TARGET_LSTM
 import cPickle
+import time, os
+TIME = time.strftime('%Y%m%d-%H%M%S')
 
 #########################################################################################
 #  Generator  Hyper-parameters
@@ -18,7 +20,7 @@ HIDDEN_DIM = 32
 SEQ_LENGTH = 20
 START_TOKEN = 0
 
-PRE_EPOCH_NUM = 240
+PRE_EPOCH_NUM = 300
 TRAIN_ITER = 1  # generator
 SEED = 88
 BATCH_SIZE = 64
@@ -58,7 +60,6 @@ class PoemGen(model.LSTM):
 def get_trainable_model(num_emb):
     return PoemGen(num_emb, BATCH_SIZE, EMB_DIM, HIDDEN_DIM, SEQ_LENGTH, START_TOKEN)
 
-
 def generate_samples(sess, trainable_model, batch_size, generated_num, output_file):
     #  Generated Samples
     generated_samples = []
@@ -75,30 +76,16 @@ def generate_samples(sess, trainable_model, batch_size, generated_num, output_fi
             fout.write(buffer)
 
 
-def target_loss(sess, target_lstm, data_loader):
+def target_perp(sess, generator, data_loader):
     supervised_g_losses = []
     data_loader.reset_pointer()
 
     for it in xrange(data_loader.num_batch):
         batch = data_loader.next_batch()
-        g_loss = sess.run(target_lstm.pretrain_loss, {target_lstm.x: batch})
+        g_loss = sess.run(generator.pretrain_loss, {generator.x: batch})
         supervised_g_losses.append(g_loss)
 
-    return np.mean(supervised_g_losses)
-
-
-def significance_test(sess, target_lstm, data_loader, output_file):
-    loss = []
-    data_loader.reset_pointer()
-
-    for it in xrange(data_loader.num_batch):
-        batch = data_loader.next_batch()
-        g_loss = sess.run(target_lstm.out_loss, {target_lstm.x: batch})
-        loss.extend(list(g_loss))
-    with open(output_file, 'w')as fout:
-        for item in loss:
-            buffer = str(item) + '\n'
-            fout.write(buffer)
+    return np.exp(np.mean(supervised_g_losses))
 
 
 def pre_train_epoch(sess, trainable_model, data_loader):
@@ -124,7 +111,7 @@ def main():
     vocab_size = 5000
     dis_data_loader = Dis_dataloader()
 
-    best_score = 1000
+    best_score = 10000
     generator = get_trainable_model(vocab_size)
     target_params = cPickle.load(open('save/target_params.pkl'))
     target_lstm = TARGET_LSTM(vocab_size, 64, 32, 32, 20, 0, target_params)
@@ -146,6 +133,7 @@ def main():
     dis_grads_and_vars = dis_optimizer.compute_gradients(cnn.loss, cnn_params, aggregation_method=2)
     dis_train_op = dis_optimizer.apply_gradients(dis_grads_and_vars, global_step=dis_global_step)
 
+    saver = tf.train.Saver()
     config = tf.ConfigProto()
     # config.gpu_options.per_process_gpu_memory_fraction = 0.5
     config.gpu_options.allow_growth = True
@@ -155,58 +143,70 @@ def main():
     generate_samples(sess, target_lstm, 64, 10000, positive_file)
     gen_data_loader.create_batches(positive_file)
 
-    log = open('log/experiment-log.txt', 'w')
+    generate_samples(sess, target_lstm, 64, 7000, eval_file)
+    gen_data_loader.create_batches(eval_file)
+
+    if not os.path.exists('./data/'+TIME):
+        os.makedirs('./data/'+TIME)
+
     #  pre-train generator
-    print 'Start pre-training...'
-    log.write('pre-training...\n')
-    for epoch in xrange(PRE_EPOCH_NUM):
-        print 'pre-train epoch:', epoch
-        loss = pre_train_epoch(sess, generator, gen_data_loader)
-        if epoch % 5 == 0:
-            generate_samples(sess, generator, BATCH_SIZE, generated_num, eval_file)
-            likelihood_data_loader.create_batches(eval_file)
-            test_loss = target_loss(sess, target_lstm, likelihood_data_loader)
-            print 'pre-train epoch ', epoch, 'test_loss ', test_loss
-            buffer = str(epoch) + ' ' + str(test_loss) + '\n'
-            log.write(buffer)
+    pretrained = False
+    if pretrained:
+        oldtime = '20170318-004737'
+        perps = cPickle.load(open('./data/'+oldtime+'/pretrain_perps_150.txt'))
+        saver.restore(sess, './data/'+oldtime+'/pretrained_150')
+    else:
+        print 'Start pre-training...'
+        perps=[]
+        for epoch in xrange(PRE_EPOCH_NUM):
+            print 'pre-train epoch:', epoch
+            loss = pre_train_epoch(sess, generator, gen_data_loader)
+            if epoch % 5 == 0:
+                test_perp = target_perp(sess, generator, eval_file)
+                perps.append(test_perp)
+                print 'pre-train epoch ', epoch, 'test_perp ', test_perp
+            if epoch == 150:
+                with open('./data/'+TIME + '/pretrain_perps_150.txt', 'w') as f:
+                    cPickle.dump(perps, f)
+                saver.save(sess, './data/'+TIME + '/pretrained_150')
 
-    generate_samples(sess, generator, BATCH_SIZE, generated_num, eval_file)
-    likelihood_data_loader.create_batches(eval_file)
-    test_loss = target_loss(sess, target_lstm, likelihood_data_loader)
-    buffer = 'After pre-training:' + ' ' + str(test_loss) + '\n'
-    log.write(buffer)
+        test_perp = target_perp(sess, generator, eval_file)
+        perps.append(test_perp)
+        with open('./data/'+TIME + '/pretrain_perps_300.txt', 'w') as f:
+            cPickle.dump(perps, f)
 
-    generate_samples(sess, generator, BATCH_SIZE, generated_num, eval_file)
-    likelihood_data_loader.create_batches(eval_file)
-    significance_test(sess, target_lstm, likelihood_data_loader, 'significance/supervise.txt')
+    quit()
 
-    print 'Start training discriminator...'
-    for _ in range(dis_alter_epoch):
-        generate_samples(sess, generator, BATCH_SIZE, generated_num, negative_file)
+    dpretrained = False
+    if dpretrained:
+        pass
+    else:
+        print 'Start training discriminator...'
+        for _ in range(dis_alter_epoch):
+            generate_samples(sess, generator, BATCH_SIZE, generated_num, negative_file)
 
-        #  train discriminator
-        dis_x_train, dis_y_train = dis_data_loader.load_train_data(positive_file, negative_file)
-        dis_batches = dis_data_loader.batch_iter(
-            zip(dis_x_train, dis_y_train), dis_batch_size, dis_num_epochs
-        )
+            #  train discriminator
+            dis_x_train, dis_y_train = dis_data_loader.load_train_data(positive_file, negative_file)
+            dis_batches = dis_data_loader.batch_iter(
+                zip(dis_x_train, dis_y_train), dis_batch_size, dis_num_epochs
+            )
 
-        for batch in dis_batches:
-            try:
-                x_batch, y_batch = zip(*batch)
-                feed = {
-                    cnn.input_x: x_batch,
-                    cnn.input_y: y_batch,
-                    cnn.dropout_keep_prob: dis_dropout_keep_prob
-                }
-                _, step = sess.run([dis_train_op, dis_global_step], feed)
-            except ValueError:
-                pass
+            for batch in dis_batches:
+                try:
+                    x_batch, y_batch = zip(*batch)
+                    feed = {
+                        cnn.input_x: x_batch,
+                        cnn.input_y: y_batch,
+                        cnn.dropout_keep_prob: dis_dropout_keep_prob
+                    }
+                    _, step = sess.run([dis_train_op, dis_global_step], feed)
+                except ValueError:
+                    pass
 
     rollout = ROLLOUT(generator, 0.8)
 
     print '#########################################################################'
     print 'Start Reinforcement Training Generator...'
-    log.write('Reinforcement Training...\n')
 
     for total_batch in range(TOTAL_BATCH):
         for it in range(TRAIN_ITER):
@@ -216,17 +216,13 @@ def main():
             _, g_loss = sess.run([generator.g_updates, generator.g_loss], feed_dict=feed)
 
         if total_batch % 1 == 0 or total_batch == TOTAL_BATCH - 1:
-            generate_samples(sess, generator, BATCH_SIZE, generated_num, eval_file)
-            likelihood_data_loader.create_batches(eval_file)
-            test_loss = target_loss(sess, target_lstm, likelihood_data_loader)
-            buffer = str(total_batch) + ' ' + str(test_loss) + '\n'
-            print 'total_batch: ', total_batch, 'test_loss: ', test_loss
-            log.write(buffer)
+            test_perp = target_perp(sess, generator, eval_file)
+            print 'total_batch: ', total_batch, 'test_perp: ', test_perp
 
             if test_loss < best_score:
                 best_score = test_loss
                 print 'best score: ', test_loss
-                significance_test(sess, target_lstm, likelihood_data_loader, 'significance/seqgan.txt')
+                #significance_test(sess, target_lstm, likelihood_data_loader, 'significance/seqgan.txt')
 
         rollout.update_params()
 
@@ -250,7 +246,6 @@ def main():
                 except ValueError:
                     pass
 
-    log.close()
 
 
 if __name__ == '__main__':
