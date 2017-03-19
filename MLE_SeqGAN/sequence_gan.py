@@ -167,7 +167,7 @@ def main():
             print 'pre-train epoch:', epoch
             loss = pre_train_epoch(sess, generator, gen_data_loader)
             if epoch % 5 == 0:
-                test_perp = np.exp(target_loss(sess, generator, eval_file))
+                test_perp = np.exp(target_loss(sess, generator, likelihood_data_loader))
                 perps.append(test_perp)
 
                 generate_samples(sess, generator, BATCH_SIZE, generated_num, target_file)
@@ -182,7 +182,7 @@ def main():
                     cPickle.dump(oraclelosses, f)
                 saver.save(sess, './data/'+TIME + '/pretrained_150')
 
-        test_perp = np.exp(target_loss(sess, generator, eval_file))
+        test_perp = np.exp(target_loss(sess, generator, likelihood_data_loader))
         perps.append(test_perp)
 
         generate_samples(sess, generator, BATCH_SIZE, generated_num, target_file)
@@ -253,7 +253,7 @@ def main():
             target_data_loader.create_batches(target_file)
             test_loss = target_loss(sess, target_lstm, target_data_loader)
             oraclelosses.append(test_loss)
-            print 'total_batch: ', total_batch, 'test_perp: ', test_perp, 'test loss' test_loss
+            print 'total_batch: ', total_batch, 'test_perp: ', test_perp, 'test loss', test_loss
             
         rollout.update_params()
 

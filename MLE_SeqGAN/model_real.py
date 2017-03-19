@@ -32,6 +32,7 @@ class LSTM(object):
 
         # placeholder definition
         self.x = tf.placeholder(tf.int32, shape=[None, self.sequence_length])
+        self.mask = tf.placeholder(tf.bool, shape=[None, self.sequence_length])
         # sequence of indices of true data, not including start token
 
         self.rewards = tf.placeholder(tf.float32, shape=[self.batch_size, self.sequence_length])
@@ -99,10 +100,10 @@ class LSTM(object):
 
         # pretraining loss
         self.pretrain_loss = -tf.reduce_sum(
-            tf.one_hot(tf.to_int32(tf.reshape(tensor=self.x, [-1])), self.num_emb, 1.0, 0.0) * tf.log(
-                tf.clip_by_value(tf.reshape(tensor=self.g_predictions, [-1, self.num_emb]), 1e-20, 1.0)
+            tf.one_hot(tf.to_int32(tf.reshape(tf.boolean_mask(tensor=self.x, mask=self.mask), [-1])), self.num_emb, 1.0, 0.0) * tf.log(
+                tf.clip_by_value(tf.reshape(tf.boolean_mask(tensor=self.g_predictions, mask=self.mask), [-1, self.num_emb]), 1e-20, 1.0)
             )
-        ) /(self.sequence_length * self.batch_size)
+        ) / tf.reduce_sum(tf.cast(self.mask, tf.float32))#(self.sequence_length * self.batch_size)
 
         # training updates
         pretrain_opt = self.g_optimizer(self.learning_rate)
@@ -131,9 +132,9 @@ class LSTM(object):
         outputs = session.run([self.gen_x])
         return outputs[0]
 
-    def pretrain_step(self, session, x):
+    def pretrain_step(self, session, x, mask):
         outputs = session.run([self.pretrain_updates, self.pretrain_loss, self.g_predictions],
-                              feed_dict={self.x: x})
+                              feed_dict={self.x: x, self.mask: mask})
         return outputs
 
     def init_matrix(self, shape):

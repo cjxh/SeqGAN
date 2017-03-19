@@ -1,7 +1,7 @@
 class GenConfig():
     def __init__(self):
-        self.EMB_DIM = 32
-        self.HIDDEN_DIM = 32
+        self.EMB_DIM = 300
+        self.HIDDEN_DIM = 150
         self.SEQ_LENGTH = 20
         self.START_TOKEN = 0
 
