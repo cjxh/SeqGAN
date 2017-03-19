@@ -6,3 +6,4 @@ data/glove/*
 data/raw_data/*
 data/penn_treebank/*
 data/preprocessed_data/*
+MaLiGAN/data/*
