@@ -47,5 +47,5 @@ for i in range(500):
     	saver.save(sess, 'pretrained_eval')
 
 with open('pretrain_perplexities_eval.txt', 'w') as f:
-    cPickle.dump(perplexities, f)
+    pickle.dump(perplexities, f)
 saver.save(sess, 'pretrained_eval')
