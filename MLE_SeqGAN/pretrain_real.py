@@ -1,4 +1,4 @@
-import model
+import model_real
 import numpy as np
 import tensorflow as tf
 import random
@@ -22,7 +22,7 @@ eval_file = '../data/preprocessed_data/eval.txt'
 
 generated_num = 10000
 
-class PoemGen(model.LSTM):
+class PoemGen(model_real.LSTM):
     def g_optimizer(self, *args, **kwargs):
         return tf.train.AdamOptimizer()  # ignore learning rate
 
