@@ -154,16 +154,15 @@ def main():
         os.makedirs('./data/'+TIME)
 
     #  pre-train generator
-    pretrained = False
+    pretrained = True
     if pretrained:
-        oldtime = '20170319-012131'
-        perps = cPickle.load(open('./data/'+oldtime+'/pretrain_perps_30.txt'))
-        saver.restore(sess, './data/'+oldtime+'/pretrained_30')
-    else:
-        print 'Start pre-training...'
         perps=cPickle.load(open('./data/20170319-055011/pretrain_perps_150.txt'))
         oraclelosses=cPickle.load(open('./data/20170319-055011/pretrain_losses_150.txt'))
         saver.restore(sess, './data/20170319-055011/pretrained_150')
+    else:
+        print 'Start pre-training...'
+        perps=[]
+        oraclelosses=[]
         for epoch in xrange(150):#PRE_EPOCH_NUM):
             print 'pre-train epoch:', epoch
             loss = pre_train_epoch(sess, generator, gen_data_loader)
@@ -195,8 +194,6 @@ def main():
         with open('./data/'+TIME + '/pretrain_losses_300.txt', 'w') as f:
             cPickle.dump(oraclelosses, f)
 
-    quit()
-
     dpretrained = False
     if dpretrained:
         oldtime = '20170319-015507'
@@ -204,7 +201,7 @@ def main():
     else:
         print 'Start training discriminator...'
         accuracies=[]
-        for _ in tqdm(range(dis_alter_epoch)):
+        for _ in range(dis_alter_epoch):
             generate_samples(sess, generator, BATCH_SIZE, generated_num, negative_file)
 
             #  train discriminator
@@ -287,7 +284,7 @@ def main():
                 cPickle.dump(perps, f)
             with open('./data/'+TIME+'/losses.txt', 'w') as f:
                 cPickle.dump(test_loss, f)
-            with open('./data/'+TIME + '/pretrain_accuracies.txt', 'w') as f:
+            with open('./data/'+TIME + '/accuracies.txt', 'w') as f:
                 cPickle.dump(accuracies, f)
 
 if __name__ == '__main__':
