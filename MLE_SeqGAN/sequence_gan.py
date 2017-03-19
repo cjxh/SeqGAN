@@ -158,22 +158,23 @@ def main():
     else:
         print 'Start pre-training...'
         perps=[]
-        for epoch in xrange(PRE_EPOCH_NUM):
+        for epoch in xrange(60):
             print 'pre-train epoch:', epoch
             loss = pre_train_epoch(sess, generator, gen_data_loader)
-            if epoch % 5 == 0:
+            if epoch % 1 == 0:
                 test_perp = target_perp(sess, generator, likelihood_data_loader)
                 perps.append(test_perp)
                 print 'pre-train epoch ', epoch, 'test_perp ', test_perp
-            if epoch == 150:
-                with open('./data/'+TIME + '/pretrain_perps_150.txt', 'w') as f:
+            if epoch == 30:
+                with open('./data/'+TIME + '/pretrain_perps_30.txt', 'w') as f:
                     cPickle.dump(perps, f)
-                saver.save(sess, './data/'+TIME + '/pretrained_150')
+                saver.save(sess, './data/'+TIME + '/pretrained_30')
 
         test_perp = target_perp(sess, generator, likelihood_data_loader)
         perps.append(test_perp)
-        with open('./data/'+TIME + '/pretrain_perps_300.txt', 'w') as f:
+        with open('./data/'+TIME + '/pretrain_perps_60.txt', 'w') as f:
             cPickle.dump(perps, f)
+        saver.save(sess, './data/'+TIME+'/pretrained_60')
 
     quit()
 
