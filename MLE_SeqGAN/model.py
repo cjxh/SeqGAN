@@ -55,7 +55,7 @@ class LSTM(object):
             log_prob = tf.log(tf.nn.softmax(o_t))
             next_token = tf.cast(tf.reshape(tf.multinomial(log_prob, 1), [self.batch_size]), tf.int32)
             x_tp1 = tf.nn.embedding_lookup(self.g_embeddings, next_token)  # batch x emb_dim
-            gen_o = gen_o.write(i, tf.reduce_sum(tf.mul(tf.one_hot(next_token, self.num_emb, 1.0, 0.0),
+            gen_o = gen_o.write(i, tf.reduce_sum(tf.multiply(tf.one_hot(next_token, self.num_emb, 1.0, 0.0),
                                                         tf.nn.softmax(o_t)), 1))  # [batch_size] , prob
             gen_x = gen_x.write(i, next_token)  # indices, batch_size
             return i + 1, x_tp1, h_t, gen_o, gen_x
