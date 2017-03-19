@@ -144,6 +144,7 @@ def main():
     gen_data_loader.create_batches(positive_file)
 
     generate_samples(sess, target_lstm, 64, 7000, eval_file)
+<<<<<<< HEAD
     likelihood_data_loader.create_batches(eval_file)
 
     if not os.path.exists('./data/'+TIME):
@@ -192,6 +193,55 @@ def main():
                 zip(dis_x_train, dis_y_train), dis_batch_size, dis_num_epochs
             )
 
+=======
+    gen_data_loader.create_batches(eval_file)
+
+    if not os.path.exists('./data/'+TIME):
+        os.makedirs('./data/'+TIME)
+
+    #  pre-train generator
+    pretrained = False
+    if pretrained:
+        oldtime = '20170318-004737'
+        perps = cPickle.load(open('./data/'+oldtime+'/pretrain_perps_150.txt'))
+        saver.restore(sess, './data/'+oldtime+'/pretrained_150')
+    else:
+        print 'Start pre-training...'
+        perps=[]
+        for epoch in xrange(PRE_EPOCH_NUM):
+            print 'pre-train epoch:', epoch
+            loss = pre_train_epoch(sess, generator, gen_data_loader)
+            if epoch % 5 == 0:
+                test_perp = target_perp(sess, generator, eval_file)
+                perps.append(test_perp)
+                print 'pre-train epoch ', epoch, 'test_perp ', test_perp
+            if epoch == 150:
+                with open('./data/'+TIME + '/pretrain_perps_150.txt', 'w') as f:
+                    cPickle.dump(perps, f)
+                saver.save(sess, './data/'+TIME + '/pretrained_150')
+
+        test_perp = target_perp(sess, generator, eval_file)
+        perps.append(test_perp)
+        with open('./data/'+TIME + '/pretrain_perps_300.txt', 'w') as f:
+            cPickle.dump(perps, f)
+
+    quit()
+
+    dpretrained = False
+    if dpretrained:
+        pass
+    else:
+        print 'Start training discriminator...'
+        for _ in range(dis_alter_epoch):
+            generate_samples(sess, generator, BATCH_SIZE, generated_num, negative_file)
+
+            #  train discriminator
+            dis_x_train, dis_y_train = dis_data_loader.load_train_data(positive_file, negative_file)
+            dis_batches = dis_data_loader.batch_iter(
+                zip(dis_x_train, dis_y_train), dis_batch_size, dis_num_epochs
+            )
+
+>>>>>>> 6dea2a225b4a493b8b4d00237c47b5067a81f28f
             for batch in dis_batches:
                 try:
                     x_batch, y_batch = zip(*batch)
@@ -217,7 +267,11 @@ def main():
             _, g_loss = sess.run([generator.g_updates, generator.g_loss], feed_dict=feed)
 
         if total_batch % 1 == 0 or total_batch == TOTAL_BATCH - 1:
+<<<<<<< HEAD
             test_perp = target_perp(sess, generator, likelihood_data_loader)
+=======
+            test_perp = target_perp(sess, generator, eval_file)
+>>>>>>> 6dea2a225b4a493b8b4d00237c47b5067a81f28f
             print 'total_batch: ', total_batch, 'test_perp: ', test_perp
 
             if test_loss < best_score:
