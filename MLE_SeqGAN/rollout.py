@@ -28,20 +28,20 @@ class ROLLOUT(object):
 
         # processed for batch
         with tf.device("/cpu:0"):
-            inputs = tf.split(1, self.sequence_length, tf.nn.embedding_lookup(self.g_embeddings, self.x))
-            self.processed_x = tf.pack(
+            inputs = tf.split(tf.nn.embedding_lookup(self.g_embeddings, self.x), 1, self.sequence_length)
+            self.processed_x = tf.stack(
                 [tf.squeeze(input_, [1]) for input_ in inputs])  # seq_length x batch_size x emb_dim
 
         ta_emb_x = tensor_array_ops.TensorArray(
             dtype=tf.float32, size=self.sequence_length)
-        ta_emb_x = ta_emb_x.unpack(self.processed_x)
+        ta_emb_x = ta_emb_x.unstack(self.processed_x)
 
         ta_x = tensor_array_ops.TensorArray(dtype=tf.int32, size=self.sequence_length)
-        ta_x = ta_x.unpack(tf.transpose(self.x, perm=[1, 0]))
+        ta_x = ta_x.unstack(tf.transpose(self.x, perm=[1, 0]))
         #####################################################################################################
 
         self.h0 = tf.zeros([self.batch_size, self.hidden_dim])
-        self.h0 = tf.pack([self.h0, self.h0])
+        self.h0 = tf.stack([self.h0, self.h0])
 
         gen_x = tensor_array_ops.TensorArray(dtype=tf.int32, size=self.sequence_length,
                                              dynamic_size=False, infer_shape=True)
@@ -72,7 +72,7 @@ class ROLLOUT(object):
             body=_g_recurrence_2,
             loop_vars=(i, x_t, h_tm1, given_num, self.gen_x))
 
-        self.gen_x = self.gen_x.pack()  # seq_length x batch_size
+        self.gen_x = self.gen_x.stack()  # seq_length x batch_size
         self.gen_x = tf.transpose(self.gen_x, perm=[1, 0])  # batch_size x seq_length
 
     def get_reward(self, sess, input_x, rollout_num, cnn):
@@ -121,7 +121,7 @@ class ROLLOUT(object):
         self.bc = tf.identity(self.lstm.bc)
 
         def unit(x, hidden_memory_tm1):
-            previous_hidden_state, c_prev = tf.unpack(hidden_memory_tm1)
+            previous_hidden_state, c_prev = tf.unstack(hidden_memory_tm1)
 
             # Input Gate
             i = tf.sigmoid(
@@ -153,7 +153,7 @@ class ROLLOUT(object):
             # Current Hidden state
             current_hidden_state = o * tf.nn.tanh(c)
 
-            return tf.pack([current_hidden_state, c])
+            return tf.stack([current_hidden_state, c])
 
         return unit
 
@@ -176,7 +176,7 @@ class ROLLOUT(object):
         self.bc = self.update_rate * self.bc + (1 - self.update_rate) * tf.identity(self.lstm.bc)
 
         def unit(x, hidden_memory_tm1):
-            previous_hidden_state, c_prev = tf.unpack(hidden_memory_tm1)
+            previous_hidden_state, c_prev = tf.unstack(hidden_memory_tm1)
 
             # Input Gate
             i = tf.sigmoid(
@@ -208,7 +208,7 @@ class ROLLOUT(object):
             # Current Hidden state
             current_hidden_state = o * tf.nn.tanh(c)
 
-            return tf.pack([current_hidden_state, c])
+            return tf.stack([current_hidden_state, c])
 
         return unit
 
@@ -217,7 +217,7 @@ class ROLLOUT(object):
         self.bo = tf.identity(self.lstm.bo)
 
         def unit(hidden_memory_tuple):
-            hidden_state, c_prev = tf.unpack(hidden_memory_tuple)
+            hidden_state, c_prev = tf.unstack(hidden_memory_tuple)
             # hidden_state : batch x hidden_dim
             logits = tf.matmul(hidden_state, self.Wo) + self.bo
             # output = tf.nn.softmax(logits)
@@ -230,7 +230,7 @@ class ROLLOUT(object):
         self.bo = self.update_rate * self.bo + (1 - self.update_rate) * tf.identity(self.lstm.bo)
 
         def unit(hidden_memory_tuple):
-            hidden_state, c_prev = tf.unpack(hidden_memory_tuple)
+            hidden_state, c_prev = tf.unstack(hidden_memory_tuple)
             # hidden_state : batch x hidden_dim
             logits = tf.matmul(hidden_state, self.Wo) + self.bo
             # output = tf.nn.softmax(logits)
