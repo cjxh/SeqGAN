@@ -1,3 +1,0 @@
-model_checkpoint_path: "trained"
-all_model_checkpoint_paths: "pretrained_disc"
-all_model_checkpoint_paths: "trained"
