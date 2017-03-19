@@ -153,8 +153,8 @@ def main():
     pretrained = True
     if pretrained:
         oldtime = '20170319-012131'
-        perps = cPickle.load(open('./data/'+oldtime+'/pretrain_perps_150.txt'))
-        saver.restore(sess, './data/'+oldtime+'/pretrained_150')
+        perps = cPickle.load(open('./data/'+oldtime+'/pretrain_perps_30.txt'))
+        saver.restore(sess, './data/'+oldtime+'/pretrained_30')
     else:
         print 'Start pre-training...'
         perps=[]
@@ -175,9 +175,10 @@ def main():
         with open('./data/'+TIME + '/pretrain_perps_300.txt', 'w') as f:
             cPickle.dump(perps, f)
 
-    dpretrained = False
+    dpretrained = True
     if dpretrained:
-        pass
+        oldtime = '20170319-015507'
+        saver.restore(sess, './data/'+oldtime+'/dpretrained')
     else:
         print 'Start training discriminator...'
         for _ in range(dis_alter_epoch):
@@ -218,10 +219,12 @@ def main():
             test_perp = target_perp(sess, generator, likelihood_data_loader)
             print 'total_batch: ', total_batch, 'test_perp: ', test_perp
             perps.append(test_perp)
+            with open('./data/'+TIME+'/perps.txt', 'w') as f:
+                cPickle.dump(perps, f)
 
-            if test_loss < best_score:
-                best_score = test_loss
-                print 'best score: ', test_loss
+            if test_perp < best_score:
+                best_score = test_perp
+                print 'best score: ', test_perp
                 #significance_test(sess, target_lstm, likelihood_data_loader, 'significance/seqgan.txt')
 
         rollout.update_params()
