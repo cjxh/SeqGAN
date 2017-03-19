@@ -8,7 +8,7 @@ from dis_dataloader import Dis_dataloader
 from text_classifier import TextCNN
 from rollout import ROLLOUT
 from target_lstm import TARGET_LSTM
-import cPickle
+import cPickle, tqdm
 import time, os
 TIME = time.strftime('%Y%m%d-%H%M%S')
 
@@ -45,6 +45,7 @@ dis_alter_epoch = 50
 positive_file = 'save/real_data.txt'
 negative_file = 'target_generate/generator_sample.txt'
 eval_file = 'target_generate/eval_file.txt'
+target_file = 'target_generate/target_file.txt'
 
 generated_num = 10000
 
@@ -76,7 +77,7 @@ def generate_samples(sess, trainable_model, batch_size, generated_num, output_fi
             fout.write(buffer)
 
 
-def target_perp(sess, generator, data_loader):
+def target_loss(sess, generator, data_loader):
     supervised_g_losses = []
     data_loader.reset_pointer()
 
@@ -85,7 +86,7 @@ def target_perp(sess, generator, data_loader):
         g_loss = sess.run(generator.pretrain_loss, {generator.x: batch})
         supervised_g_losses.append(g_loss)
 
-    return np.exp(np.mean(supervised_g_losses))
+    return np.mean(supervised_g_losses)
 
 
 def pre_train_epoch(sess, trainable_model, data_loader):
@@ -108,6 +109,7 @@ def main():
 
     gen_data_loader = Gen_Data_loader(BATCH_SIZE)
     likelihood_data_loader = Likelihood_data_loader(BATCH_SIZE)
+    target_data_loader = Likelihood_data_loader(BATCH_SIZE)
     vocab_size = 5000
     dis_data_loader = Dis_dataloader()
 
@@ -146,11 +148,13 @@ def main():
     #generate_samples(sess, target_lstm, 64, 7000, eval_file)
     likelihood_data_loader.create_batches(eval_file)
 
+
+
     if not os.path.exists('./data/'+TIME):
         os.makedirs('./data/'+TIME)
 
     #  pre-train generator
-    pretrained = True
+    pretrained = False
     if pretrained:
         oldtime = '20170319-012131'
         perps = cPickle.load(open('./data/'+oldtime+'/pretrain_perps_30.txt'))
@@ -158,30 +162,48 @@ def main():
     else:
         print 'Start pre-training...'
         perps=[]
+        oraclelosses=[]
         for epoch in xrange(PRE_EPOCH_NUM):
             print 'pre-train epoch:', epoch
             loss = pre_train_epoch(sess, generator, gen_data_loader)
             if epoch % 5 == 0:
-                test_perp = target_perp(sess, generator, eval_file)
+                test_perp = np.exp(target_loss(sess, generator, eval_file))
                 perps.append(test_perp)
-                print 'pre-train epoch ', epoch, 'test_perp ', test_perp
+
+                generate_samples(sess, generator, BATCH_SIZE, generated_num, target_file)
+                target_data_loader.create_batches(target_file)
+                test_loss = target_loss(sess, target_lstm, target_data_loader)
+                oraclelosses.append(test_loss)
+                print 'pre-train epoch ', epoch, 'test_perp ', test_perp, 'test loss', test_loss
             if epoch == 150:
                 with open('./data/'+TIME + '/pretrain_perps_150.txt', 'w') as f:
                     cPickle.dump(perps, f)
+                with open('./data/'+TIME + '/pretrain_losses_150.txt', 'w') as f:
+                    cPickle.dump(oraclelosses, f)
                 saver.save(sess, './data/'+TIME + '/pretrained_150')
 
-        test_perp = target_perp(sess, generator, eval_file)
+        test_perp = np.exp(target_loss(sess, generator, eval_file))
         perps.append(test_perp)
+
+        generate_samples(sess, generator, BATCH_SIZE, generated_num, target_file)
+        target_data_loader.create_batches(target_file)
+        test_loss = target_loss(sess, target_lstm, target_data_loader)
+        oraclelosses.append(test_loss)
         with open('./data/'+TIME + '/pretrain_perps_300.txt', 'w') as f:
             cPickle.dump(perps, f)
+        with open('./data/'+TIME + '/pretrain_losses_300.txt', 'w') as f:
+            cPickle.dump(oraclelosses, f)
 
-    dpretrained = True
+    quit()
+
+    dpretrained = False
     if dpretrained:
         oldtime = '20170319-015507'
         saver.restore(sess, './data/'+oldtime+'/dpretrained')
     else:
         print 'Start training discriminator...'
-        for _ in range(dis_alter_epoch):
+        accuracies=[]
+        for _ in tqdm(range(dis_alter_epoch)):
             generate_samples(sess, generator, BATCH_SIZE, generated_num, negative_file)
 
             #  train discriminator
@@ -190,6 +212,7 @@ def main():
                 zip(dis_x_train, dis_y_train), dis_batch_size, dis_num_epochs
             )
 
+            batch_accs=[]
             for batch in dis_batches:
                 try:
                     x_batch, y_batch = zip(*batch)
@@ -198,9 +221,16 @@ def main():
                         cnn.input_y: y_batch,
                         cnn.dropout_keep_prob: dis_dropout_keep_prob
                     }
-                    _, step = sess.run([dis_train_op, dis_global_step], feed)
+                    _, step, acc = sess.run([dis_train_op, dis_global_step, cnn.accuracy], feed)
+                    batch_accs.append(acc)
                 except ValueError:
                     pass
+
+            accuracies.append(np.mean(batch_accs))
+            print 'acc: ', np.mean(batch_accs)
+
+        with open('./data/'+TIME + '/pretrain_accuracies.txt', 'w') as f:
+            cPickle.dump(accuracies, f)
         saver.save(sess, './data/'+TIME+'/dpretrained')
 
     rollout = ROLLOUT(generator, 0.8)
@@ -216,17 +246,15 @@ def main():
             _, g_loss = sess.run([generator.g_updates, generator.g_loss], feed_dict=feed)
 
         if total_batch % 1 == 0 or total_batch == TOTAL_BATCH - 1:
-            test_perp = target_perp(sess, generator, likelihood_data_loader)
-            print 'total_batch: ', total_batch, 'test_perp: ', test_perp
+            test_perp = np.exp(target_loss(sess, generator, likelihood_data_loader))
             perps.append(test_perp)
-            with open('./data/'+TIME+'/perps.txt', 'w') as f:
-                cPickle.dump(perps, f)
 
-            if test_perp < best_score:
-                best_score = test_perp
-                print 'best score: ', test_perp
-                #significance_test(sess, target_lstm, likelihood_data_loader, 'significance/seqgan.txt')
-
+            generate_samples(sess, generator, BATCH_SIZE, generated_num, target_file)
+            target_data_loader.create_batches(target_file)
+            test_loss = target_loss(sess, target_lstm, target_data_loader)
+            oraclelosses.append(test_loss)
+            print 'total_batch: ', total_batch, 'test_perp: ', test_perp, 'test loss' test_loss
+            
         rollout.update_params()
 
         # generate for discriminator
@@ -237,6 +265,7 @@ def main():
             dis_x_train, dis_y_train = dis_data_loader.load_train_data(positive_file, negative_file)
             dis_batches = dis_data_loader.batch_iter(zip(dis_x_train, dis_y_train), dis_batch_size, 3)
 
+            batch_accs = []
             for batch in dis_batches:
                 try:
                     x_batch, y_batch = zip(*batch)
@@ -245,9 +274,20 @@ def main():
                         cnn.input_y: y_batch,
                         cnn.dropout_keep_prob: dis_dropout_keep_prob
                     }
-                    _, step = sess.run([dis_train_op, dis_global_step], feed)
+                    _, step, accuracy = sess.run([dis_train_op, dis_global_step, cnn.accuracy], feed)
+                    batch_accs.append(accuracy)
                 except ValueError:
                     pass
+            accuracies.append(np.mean(batch_accs))
+            print 'acc: ', np.mean(batch_accs)
+
+        if total_batch % 5 == 0:
+            with open('./data/'+TIME+'/perps.txt', 'w') as f:
+                cPickle.dump(perps, f)
+            with open('./data/'+TIME+'/losses.txt', 'w') as f:
+                cPickle.dump(test_loss, f)
+            with open('./data/'+TIME + '/pretrain_accuracies.txt', 'w') as f:
+                cPickle.dump(accuracies, f)
 
 if __name__ == '__main__':
     main()
