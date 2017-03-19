@@ -1,4 +1,5 @@
 import tensorflow as tf
+import numpy as np
 from tensorflow.python.ops import tensor_array_ops, control_flow_ops
 import dill
 
@@ -23,13 +24,14 @@ class LSTM(object):
         self.expected_reward = tf.Variable(tf.zeros([self.sequence_length]))
 
         with tf.variable_scope('generator'):
-            self.g_embeddings = tf.Variable(self.init_matrix([self.num_emb, self.emb_dim]))
+            #self.g_embeddings = tf.Variable(self.init_matrix([self.num_emb, self.emb_dim]))
+            self.g_embeddings = tf.cast(tf.get_variable('embeddings', initializer=np.load('../data/glove/trimmed_glove_vectors.npy')), tf.float32)
             self.g_params.append(self.g_embeddings)
             self.g_recurrent_unit = self.create_recurrent_unit(self.g_params)  # maps h_tm1 to h_t for generator
             self.g_output_unit = self.create_output_unit(self.g_params)  # maps h_t to o_t (output token logits)
 
         # placeholder definition
-        self.x = tf.placeholder(tf.int32, shape=[self.batch_size, self.sequence_length])
+        self.x = tf.placeholder(tf.int32, shape=[None, self.sequence_length])
         # sequence of indices of true data, not including start token
 
         self.rewards = tf.placeholder(tf.float32, shape=[self.batch_size, self.sequence_length])
@@ -97,10 +99,10 @@ class LSTM(object):
 
         # pretraining loss
         self.pretrain_loss = -tf.reduce_sum(
-            tf.one_hot(tf.to_int32(tf.reshape(self.x, [-1])), self.num_emb, 1.0, 0.0) * tf.log(
-                tf.clip_by_value(tf.reshape(self.g_predictions, [-1, self.num_emb]), 1e-20, 1.0)
+            tf.one_hot(tf.to_int32(tf.reshape(tensor=self.x, [-1])), self.num_emb, 1.0, 0.0) * tf.log(
+                tf.clip_by_value(tf.reshape(tensor=self.g_predictions, [-1, self.num_emb]), 1e-20, 1.0)
             )
-        ) / (self.sequence_length * self.batch_size)
+        ) /(self.sequence_length * self.batch_size)
 
         # training updates
         pretrain_opt = self.g_optimizer(self.learning_rate)
