@@ -37,6 +37,7 @@ def create_lexicon(file_name):
         print "Pre-processing and saving word lexicon in memory..."
         for word in tqdm(f):
             word = word.strip()
+            print str(word)
             lexicon[word] = counter
             counter += 1
     print len(lexicon.keys())
@@ -56,6 +57,7 @@ def trim_glove_and_lexicon(all_words, lexicon_file, glove_file, emb_size):
         if word in lexicon.keys():
             new_lexicon[word] = counter
             idx = lexicon[word]
+            counter += 1
             new_embeddings.append(embeddings[idx])
     print "Saving trimmed word lexicon..."
     lexicon_file = lexicon_file.split('.')
