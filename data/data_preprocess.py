@@ -1,6 +1,7 @@
 import numpy as np
 from tqdm import tqdm
 from collections import defaultdict
+import pickle
 
 UNK = 0
 START = 1
@@ -26,10 +27,6 @@ def preprocess_penn(data_file, max_length, is_eval=False):
                 word_frequency[tup[1]] += 1
     write_tokens.close()
     if not is_eval:
-        del word_frequency['<START>']
-        if '<UNK>' in word_frequency.keys():
-            del word_frequency['<UNK>']
-        del word_frequency['<END>']
         all_words = set(sorted(word_frequency, key=word_frequency.get, reverse=True)[:10000])
         return all_words
 
@@ -60,11 +57,9 @@ def trim_glove_and_lexicon(all_words, lexicon_file, glove_file, emb_size):
             new_lexicon[word] = counter
             idx = lexicon[word]
             new_embeddings.append(embeddings[idx])
-    f = open('glove/trimmed_' + lexicon_file, 'w')
-    print "Writing top 10k words to lexicon file..."
-    for word in tqdm(new_lexicon.keys()):
-        f.write(word + '\n')
-    f.close()
+    print "Saving trimmed word lexicon..."
+    lexicon_file = lexicon_file.split('.')
+    pickle.dump(new_lexicon, open( 'glove/trimmed_' + lexicon_file[0] + '.p', "wb" ) )
     print "Saving trimmed glove vectors..."
     np.save('glove/trimmed_' + glove_file, new_embeddings)
     return new_lexicon
