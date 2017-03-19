@@ -1,7 +1,5 @@
 import tensorflow as tf
-import numpy as np
 from tensorflow.python.ops import tensor_array_ops, control_flow_ops
-import dill
 
 
 class LSTM(object):
@@ -30,7 +28,7 @@ class LSTM(object):
             self.g_output_unit = self.create_output_unit(self.g_params)  # maps h_t to o_t (output token logits)
 
         # placeholder definition
-        self.x = tf.placeholder(tf.int32, shape=[None, self.sequence_length])
+        self.x = tf.placeholder(tf.int32, shape=[self.batch_size, self.sequence_length])
         # sequence of indices of true data, not including start token
 
         self.rewards = tf.placeholder(tf.float32, shape=[self.batch_size, self.sequence_length])
@@ -101,7 +99,7 @@ class LSTM(object):
             tf.one_hot(tf.to_int32(tf.reshape(self.x, [-1])), self.num_emb, 1.0, 0.0) * tf.log(
                 tf.clip_by_value(tf.reshape(self.g_predictions, [-1, self.num_emb]), 1e-20, 1.0)
             )
-        ) /(self.sequence_length * self.batch_size)
+        ) / (self.sequence_length * self.batch_size)
 
         # training updates
         pretrain_opt = self.g_optimizer(self.learning_rate)
@@ -217,7 +215,3 @@ class LSTM(object):
 
     def g_optimizer(self, *args, **kwargs):
         return tf.train.GradientDescentOptimizer(*args, **kwargs)
-
-    def save(self, filename):
-        with open(filename, 'w') as f:
-            dill.dump(self, f, -1)
