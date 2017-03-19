@@ -7,3 +7,4 @@ data/raw_data/*
 data/penn_treebank/*
 data/preprocessed_data/*
 MaLi_GAN/data/*
+MaLi_GAN/target_generate/*

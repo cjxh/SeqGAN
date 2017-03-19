@@ -144,7 +144,7 @@ def main():
     gen_data_loader.create_batches(positive_file)
 
     generate_samples(sess, target_lstm, 64, 7000, eval_file)
-    gen_data_loader.create_batches(eval_file)
+    likelihood_data_loader.create_batches(eval_file)
 
     if not os.path.exists('./data/'+TIME):
         os.makedirs('./data/'+TIME)
@@ -162,7 +162,7 @@ def main():
             print 'pre-train epoch:', epoch
             loss = pre_train_epoch(sess, generator, gen_data_loader)
             if epoch % 5 == 0:
-                test_perp = target_perp(sess, generator, eval_file)
+                test_perp = target_perp(sess, generator, likelihood_data_loader)
                 perps.append(test_perp)
                 print 'pre-train epoch ', epoch, 'test_perp ', test_perp
             if epoch == 150:
@@ -170,7 +170,7 @@ def main():
                     cPickle.dump(perps, f)
                 saver.save(sess, './data/'+TIME + '/pretrained_150')
 
-        test_perp = target_perp(sess, generator, eval_file)
+        test_perp = target_perp(sess, generator, likelihood_data_loader)
         perps.append(test_perp)
         with open('./data/'+TIME + '/pretrain_perps_300.txt', 'w') as f:
             cPickle.dump(perps, f)
@@ -216,7 +216,7 @@ def main():
             _, g_loss = sess.run([generator.g_updates, generator.g_loss], feed_dict=feed)
 
         if total_batch % 1 == 0 or total_batch == TOTAL_BATCH - 1:
-            test_perp = target_perp(sess, generator, eval_file)
+            test_perp = target_perp(sess, generator, likelihood_data_loader)
             print 'total_batch: ', total_batch, 'test_perp: ', test_perp
 
             if test_loss < best_score:
