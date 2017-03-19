@@ -42,15 +42,17 @@ sess.run(tf.global_variables_initializer())
 perplexities = []
 for i in range(500):
     loss = gen.pretrain_one_epoch(sess, pos_dl)
-    if i % 5 == 0:
-    	perp = gen.get_perplexity(sess, eval_dl)
+
+    '''if i % 5 == 0:
+    	perp = gen.get_perplexity(sess, pos_dl)
     	print perp
     	perplexities.append(perp)
 
     	with open('pretrain_perplexities.txt', 'w') as f:
-    		cPickle.dump(perplexities, f)
-    	saver.save(sess, 'pretrained')
+    		pickle.dump(perplexities, f)
+    	saver.save(sess, 'pretrained')'''
+    print loss
 
 with open('pretrain_perplexities.txt', 'w') as f:
-    cPickle.dump(perplexities, f)
+    pickle.dump(perplexities, f)
 saver.save(sess, 'pretrained')

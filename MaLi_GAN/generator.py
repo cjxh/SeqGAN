@@ -6,10 +6,10 @@ from tqdm import tqdm
 class Generator(object):
     def __init__(self, num_emb, batch_size, emb_dim, hidden_dim,
                  sequence_length, start_token, m, pretrained_embeddings, 
-                 learning_rate=0.01, reward_gamma=0.95):
+                 learning_rate=0.005, reward_gamma=0.95):
         self.hidden_dim = 200
         self.sequence_length = sequence_length
-        #self.batch_size = batch_size
+        self.batch_size = batch_size
         self.num_emb = num_emb
         self.emb_dim = emb_dim
         self.learning_rate = learning_rate
@@ -115,9 +115,9 @@ class Generator(object):
         # self.train_loss = -tf.reduce_sum(tf.reduce_sum(masked, 1) * self.rewards)
 
     def add_placeholders(self):
-        self.x = tf.placeholder(tf.int32, shape=[None, self.sequence_length])
+        self.x = tf.placeholder(tf.int32, shape=[self.batch_size, self.sequence_length])
         self.given_num = tf.placeholder(tf.int32)
-        self.mask = tf.placeholder(tf.bool, shape=[None, self.sequence_length])
+        self.mask = tf.placeholder(tf.bool, shape=[self.batch_size, self.sequence_length])
         self.rewards = tf.placeholder(tf.float32, shape=[None, 1])
 
     def add_train_op(self, loss, lr):
