@@ -161,9 +161,10 @@ def main():
         saver.restore(sess, './data/'+oldtime+'/pretrained_30')
     else:
         print 'Start pre-training...'
-        perps=[]
-        oraclelosses=[]
-        for epoch in xrange(PRE_EPOCH_NUM):
+        perps=cPickle.load(open('./data/20170319-055011/pretrain_perps_150.txt'))
+        oraclelosses=cPickle.load(open('./data/20170319-055011/pretrain_losses_150.txt'))
+        saver.restore(sess, './data/20170319-055011/pretrained_150')
+        for epoch in xrange(150):#PRE_EPOCH_NUM):
             print 'pre-train epoch:', epoch
             loss = pre_train_epoch(sess, generator, gen_data_loader)
             if epoch % 5 == 0:
@@ -175,12 +176,12 @@ def main():
                 test_loss = target_loss(sess, target_lstm, target_data_loader)
                 oraclelosses.append(test_loss)
                 print 'pre-train epoch ', epoch, 'test_perp ', test_perp, 'test loss', test_loss
-            if epoch == 150:
-                with open('./data/'+TIME + '/pretrain_perps_150.txt', 'w') as f:
+                #if epoch == 150:
+                with open('./data/'+TIME + '/pretrain_perps_300.txt', 'w') as f:
                     cPickle.dump(perps, f)
-                with open('./data/'+TIME + '/pretrain_losses_150.txt', 'w') as f:
+                with open('./data/'+TIME + '/pretrain_losses_300.txt', 'w') as f:
                     cPickle.dump(oraclelosses, f)
-                saver.save(sess, './data/'+TIME + '/pretrained_150')
+                saver.save(sess, './data/'+TIME + '/pretrained_300')
 
         test_perp = np.exp(target_loss(sess, generator, likelihood_data_loader))
         perps.append(test_perp)
