@@ -7,7 +7,7 @@ START = 1
 END = 2
 
 class DataLoader(object):
-    def __init__(self, N, batch_size, is_synthetic, data_file, lexicon = {}):
+    def __init__(self, N, batch_size, is_synthetic, data_file, lexicon):
         self.batch_size = batch_size
         self.max_length = N
         self.token_stream = []

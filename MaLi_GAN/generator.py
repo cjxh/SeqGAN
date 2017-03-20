@@ -6,7 +6,7 @@ from tqdm import tqdm
 class Generator(object):
     def __init__(self, num_emb, batch_size, emb_dim, hidden_dim,
                  sequence_length, start_token, m, pretrained_embeddings, 
-                 learning_rate=0.005, reward_gamma=0.95):
+                 learning_rate=0.01, reward_gamma=0.95):
         self.hidden_dim = 200
         self.sequence_length = sequence_length
         self.batch_size = batch_size
@@ -32,8 +32,8 @@ class Generator(object):
         #self.build_xij()
 
         # pretraining functions
-        self.pretrain_loss = self.add_pretrain_loss()
-        self.pretrain_op = self.add_train_op(self.pretrain_loss, .1)
+        self.pretrain_loss = tf.Print(self.add_pretrain_loss(), [self.x, self.mask])
+        self.pretrain_op = self.add_train_op(self.pretrain_loss, self.learning_rate)
 
         # maligan functions
         self.train_loss = self.add_train_loss()
@@ -56,7 +56,7 @@ class Generator(object):
             supervised_g_losses.append(g_loss)
 
         loss = np.mean(supervised_g_losses)
-        return np.exp(loss)
+        return loss
 
     def get_perplexity(self, sess, data_loader):
         supervised_g_losses = []
@@ -69,7 +69,7 @@ class Generator(object):
             supervised_g_losses.append(g_loss)
 
         loss = np.mean(supervised_g_losses)
-        return np.exp(loss)
+        return loss, np.exp(loss)
 
     def generate_from_latch(self, sess, input_x, N):
         feed = {self.x: input_x, self.given_num: N}
@@ -135,7 +135,7 @@ class Generator(object):
             tf.one_hot(tf.to_int32(tf.reshape(tf.boolean_mask(tensor=self.x, mask=self.mask), [-1])), self.num_emb, 1.0, 0.0) * tf.log(
                 tf.clip_by_value(tf.reshape(tf.boolean_mask(tensor=self.g_predictions, mask=self.mask), [-1, self.num_emb]), 1e-20, 1.0)
             )
-        ) / tf.reduce_sum(tf.cast(self.mask, tf.float32))#(self.sequence_length * tf.to_float(self.batch_size))
+        ) / tf.reduce_sum(tf.cast(self.mask, tf.float32)) #(self.sequence_length * tf.to_float(self.batch_size))
 
     def preprocess_x(self):
         with tf.device("/cpu:0"):
