@@ -80,7 +80,11 @@ class DataLoader(object):
 
     def next_batch(self):
         ret = self.mini_batches[self.pointer]
+<<<<<<< HEAD
         ret_mask = self.mini_batches_mask[self.pointer]
+=======
+        ret_mask = self.mini_batches[self.pointer]
+>>>>>>> 0641172ece9e02c0962a2da119d26909db4a5ae6
         self.pointer = (self.pointer + 1) % self.num_batch
         return ret, ret_mask
 
