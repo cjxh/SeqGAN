@@ -9,4 +9,5 @@ data/preprocessed_data/*
 MaLi_GAN/data/*
 MLE_GAN/target_generate/*
 MLE_GAN/save/*
+MLE_GAN/data/*
 MaLi_GAN/pretrained.data*
