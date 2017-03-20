@@ -6,13 +6,7 @@ data/glove/*
 data/raw_data/*
 data/penn_treebank/*
 data/preprocessed_data/*
-<<<<<<< HEAD
 MaLi_GAN/data/*
 MLE_GAN/target_generate/*
 MLE_GAN/save/*
-<<<<<<< HEAD
 MaLi_GAN/pretrained.data*
-=======
-=======
->>>>>>> 6dea2a225b4a493b8b4d00237c47b5067a81f28f
->>>>>>> 0641172ece9e02c0962a2da119d26909db4a5ae6
