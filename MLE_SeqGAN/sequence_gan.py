@@ -258,7 +258,7 @@ def main():
 
         # generate for discriminator
         print 'Start training discriminator'
-        for _ in range(5):
+        for _ in range(1):
             generate_samples(sess, generator, BATCH_SIZE, generated_num, negative_file)
 
             dis_x_train, dis_y_train = dis_data_loader.load_train_data(positive_file, negative_file)
@@ -273,7 +273,8 @@ def main():
                         cnn.input_y: y_batch,
                         cnn.dropout_keep_prob: dis_dropout_keep_prob
                     }
-                    _, step, accuracy = sess.run([dis_train_op, dis_global_step, cnn.accuracy], feed)
+                    #_, step, accuracy = sess.run([dis_train_op, dis_global_step, cnn.accuracy], feed)
+                    accuracy = sess.run(cnn.accuracy, feed)
                     batch_accs.append(accuracy)
                 except ValueError:
                     pass
