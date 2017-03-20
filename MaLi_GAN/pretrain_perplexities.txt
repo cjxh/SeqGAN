@@ -14,14 +14,10 @@ S'<'
 NNNI-1
 I-1
 I0
-tbS'\x18\xea~C'
+tbS'U|\x87C'
 tRp5
 ag2
 (g4
-S']\xb0~C'
+S'\xf6\xc3\xa8C'
 tRp6
-ag2
-(g4
-S'\xf07\x80C'
-tRp7
 a.
