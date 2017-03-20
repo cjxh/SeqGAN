@@ -13,7 +13,6 @@ batch_size = 64
 embedding_size = 300
 
 lexicon = pickle.load(open('../data/glove/trimmed_word_lexicon.p', 'r'))
-print lexicon
 vocab_size = len(lexicon.keys()) 
 
 # load real data
@@ -42,16 +41,17 @@ sess.run(tf.global_variables_initializer())
 perplexities = []
 for i in range(500):
     loss = gen.pretrain_one_epoch(sess, pos_dl)
+    print 'training loss: ' + str(loss)
 
-    '''if i % 5 == 0:
-    	perp = gen.get_perplexity(sess, pos_dl)
-    	print perp
+    if i % 5 == 0:
+    	p_loss, perp = gen.get_perplexity(sess, eval_dl)
+        print 'eval_loss: ' + str(p_loss)
+    	print 'perplexity: ' + str(perp)
     	perplexities.append(perp)
 
     	with open('pretrain_perplexities.txt', 'w') as f:
     		pickle.dump(perplexities, f)
-    	saver.save(sess, 'pretrained')'''
-    print loss
+    	saver.save(sess, 'pretrained')
 
 with open('pretrain_perplexities.txt', 'w') as f:
     pickle.dump(perplexities, f)
