@@ -56,7 +56,11 @@ class Generator(object):
             supervised_g_losses.append(g_loss)
 
         loss = np.mean(supervised_g_losses)
+<<<<<<< HEAD
         return loss
+=======
+        return np.exp(loss)
+>>>>>>> 0641172ece9e02c0962a2da119d26909db4a5ae6
 
     def get_perplexity(self, sess, data_loader):
         supervised_g_losses = []
@@ -69,7 +73,11 @@ class Generator(object):
             supervised_g_losses.append(g_loss)
 
         loss = np.mean(supervised_g_losses)
+<<<<<<< HEAD
         return loss, np.exp(loss)
+=======
+        return np.exp(loss)
+>>>>>>> 0641172ece9e02c0962a2da119d26909db4a5ae6
 
     def generate_from_latch(self, sess, input_x, N):
         feed = {self.x: input_x, self.given_num: N}
@@ -117,7 +125,11 @@ class Generator(object):
     def add_placeholders(self):
         self.x = tf.placeholder(tf.int32, shape=[self.batch_size, self.sequence_length])
         self.given_num = tf.placeholder(tf.int32)
+<<<<<<< HEAD
         self.mask = tf.placeholder(tf.bool, shape=[self.batch_size, self.sequence_length])
+=======
+        self.mask = tf.placeholder(tf.bool, shape=[None, self.sequence_length])
+>>>>>>> 0641172ece9e02c0962a2da119d26909db4a5ae6
         self.rewards = tf.placeholder(tf.float32, shape=[None, 1])
 
     def add_train_op(self, loss, lr):
@@ -135,7 +147,11 @@ class Generator(object):
             tf.one_hot(tf.to_int32(tf.reshape(tf.boolean_mask(tensor=self.x, mask=self.mask), [-1])), self.num_emb, 1.0, 0.0) * tf.log(
                 tf.clip_by_value(tf.reshape(tf.boolean_mask(tensor=self.g_predictions, mask=self.mask), [-1, self.num_emb]), 1e-20, 1.0)
             )
+<<<<<<< HEAD
         ) / tf.reduce_sum(tf.cast(self.mask, tf.float32)) #(self.sequence_length * tf.to_float(self.batch_size))
+=======
+        ) / tf.reduce_sum(tf.cast(self.mask, tf.float32))#(self.sequence_length * tf.to_float(self.batch_size))
+>>>>>>> 0641172ece9e02c0962a2da119d26909db4a5ae6
 
     def preprocess_x(self):
         with tf.device("/cpu:0"):
