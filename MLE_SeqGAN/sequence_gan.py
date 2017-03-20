@@ -194,9 +194,10 @@ def main():
         with open('./data/'+TIME + '/pretrain_losses_300.txt', 'w') as f:
             cPickle.dump(oraclelosses, f)
 
-    dpretrained = False
+    dpretrained = True
     if dpretrained:
-        oldtime = '20170319-015507'
+        oldtime = '20170319-205140'
+        accuracies= cPickle.load(open('./data/'+oldtime+'/pretrain_accuracies.txt'))
         saver.restore(sess, './data/'+oldtime+'/dpretrained')
     else:
         print 'Start training discriminator...'
@@ -283,9 +284,10 @@ def main():
             with open('./data/'+TIME+'/perps.txt', 'w') as f:
                 cPickle.dump(perps, f)
             with open('./data/'+TIME+'/losses.txt', 'w') as f:
-                cPickle.dump(test_loss, f)
+                cPickle.dump(oraclelosses, f)
             with open('./data/'+TIME + '/accuracies.txt', 'w') as f:
                 cPickle.dump(accuracies, f)
+            saver.save(sess, './data/'+TIME+'/trained')
 
 if __name__ == '__main__':
     main()
