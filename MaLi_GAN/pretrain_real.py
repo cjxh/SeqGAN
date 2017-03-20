@@ -18,6 +18,7 @@ reverse_lexicon = {}
 for word in lexicon.keys():
     reverse_lexicon[lexicon[word]] = word
     
+vocab_size = len(lexicon.keys()) 
 
 # load real data
 positive_file = '../data/preprocessed_data/train.txt'
