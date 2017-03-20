@@ -5,8 +5,8 @@ from tqdm import tqdm
 
 class Generator(object):
     def __init__(self, num_emb, batch_size, emb_dim, hidden_dim,
-                 sequence_length, start_token, m, pretrained_embeddings, 
-                 learning_rate=0.01, reward_gamma=0.95):
+                 sequence_length, start_token, m, pretrained_embeddings,
+                 learning_rate=0.001, reward_gamma=0.95):
         self.hidden_dim = 200
         self.sequence_length = sequence_length
         self.batch_size = batch_size
@@ -15,7 +15,6 @@ class Generator(object):
         self.learning_rate = learning_rate
         self.m = m
         self.baseline = 0
-
         self.g_embeddings = tf.cast(pretrained_embeddings, tf.float32)
         
         self.g_recurrent_unit = self.create_recurrent_unit()  # maps h_tm1 to h_t for generator
@@ -32,7 +31,7 @@ class Generator(object):
         #self.build_xij()
 
         # pretraining functions
-        self.pretrain_loss = tf.Print(self.add_pretrain_loss(), [self.x, self.mask])
+        self.pretrain_loss = self.add_pretrain_loss()
         self.pretrain_op = self.add_train_op(self.pretrain_loss, self.learning_rate)
 
         # maligan functions
@@ -40,44 +39,36 @@ class Generator(object):
         self.train_op = self.add_train_op(self.train_loss, .001)
         
     ###### Client functions ###################################################################
-    def pretrain_one_step(self, sess, input_x, input_mask):
+    def pretrain_one_step(self, sess, input_x, input_mask, seq_lens):
         #### Call this to pretrain #######
-        feed = {self.x: input_x, self.mask : input_mask}
+        feed = {self.x: input_x, self.mask : input_mask, self.seq_lens: seq_lens}
         _, loss = sess.run([self.pretrain_op, self.pretrain_loss], feed_dict=feed)
         return loss
 
     def pretrain_one_epoch(self, sess, data_loader):
         supervised_g_losses = []
-        data_loader.reset_pointer()
+        #data_loader.reset_pointer()
 
-        for it in xrange(data_loader.num_batch):
-            batch, mask_batch = data_loader.next_batch()
-            g_loss = self.pretrain_one_step(sess, batch, mask_batch)
+        for it in xrange(1):#data_loader.num_batch / 2):
+            batch, mask_batch, seq_lens = data_loader.next_batch()
+            g_loss = self.pretrain_one_step(sess, batch, mask_batch, seq_lens)
             supervised_g_losses.append(g_loss)
 
         loss = np.mean(supervised_g_losses)
-<<<<<<< HEAD
         return loss
-=======
-        return np.exp(loss)
->>>>>>> 0641172ece9e02c0962a2da119d26909db4a5ae6
 
     def get_perplexity(self, sess, data_loader):
         supervised_g_losses = []
-        data_loader.reset_pointer()
+        #data_loader.reset_pointer()
 
-        for it in xrange(data_loader.num_batch):
-            batch, mask_batch = data_loader.next_batch()
-            feed = {self.x: batch, self.mask : mask_batch}
+        for it in xrange(1):#data_loader.num_batch / 2):
+            batch, mask_batch, seq_lens = data_loader.next_batch()
+            feed = {self.x: batch, self.mask : mask_batch, self.seq_lens: seq_lens}
             g_loss = sess.run(self.pretrain_loss, feed_dict=feed)
             supervised_g_losses.append(g_loss)
 
         loss = np.mean(supervised_g_losses)
-<<<<<<< HEAD
         return loss, np.exp(loss)
-=======
-        return np.exp(loss)
->>>>>>> 0641172ece9e02c0962a2da119d26909db4a5ae6
 
     def generate_from_latch(self, sess, input_x, N):
         feed = {self.x: input_x, self.given_num: N}
@@ -123,13 +114,10 @@ class Generator(object):
         # self.train_loss = -tf.reduce_sum(tf.reduce_sum(masked, 1) * self.rewards)
 
     def add_placeholders(self):
-        self.x = tf.placeholder(tf.int32, shape=[self.batch_size, self.sequence_length])
+        self.x = tf.placeholder(tf.int32, shape=[None, self.sequence_length])
         self.given_num = tf.placeholder(tf.int32)
-<<<<<<< HEAD
+        self.seq_lens = tf.placeholder(tf.int32, shape=[self.batch_size,])
         self.mask = tf.placeholder(tf.bool, shape=[self.batch_size, self.sequence_length])
-=======
-        self.mask = tf.placeholder(tf.bool, shape=[None, self.sequence_length])
->>>>>>> 0641172ece9e02c0962a2da119d26909db4a5ae6
         self.rewards = tf.placeholder(tf.float32, shape=[None, 1])
 
     def add_train_op(self, loss, lr):
@@ -143,15 +131,19 @@ class Generator(object):
         return optimizer.apply_gradients(zip(gradients, variables))'''
 
     def add_pretrain_loss(self):
-        return -tf.reduce_sum(
+        self.avg_seq_len = tf.to_float(tf.reduce_sum(self.seq_lens)) / tf.to_float(self.batch_size)
+        self.loss_sum = -tf.reduce_sum(
             tf.one_hot(tf.to_int32(tf.reshape(tf.boolean_mask(tensor=self.x, mask=self.mask), [-1])), self.num_emb, 1.0, 0.0) * tf.log(
                 tf.clip_by_value(tf.reshape(tf.boolean_mask(tensor=self.g_predictions, mask=self.mask), [-1, self.num_emb]), 1e-20, 1.0)
             )
-<<<<<<< HEAD
-        ) / tf.reduce_sum(tf.cast(self.mask, tf.float32)) #(self.sequence_length * tf.to_float(self.batch_size))
-=======
-        ) / tf.reduce_sum(tf.cast(self.mask, tf.float32))#(self.sequence_length * tf.to_float(self.batch_size))
->>>>>>> 0641172ece9e02c0962a2da119d26909db4a5ae6
+        ) 
+        self.g_loss = self.loss_sum / (tf.to_float(self.avg_seq_len) * tf.to_float(self.batch_size))
+        return self.g_loss
+        '''return -tf.reduce_sum(
+            tf.one_hot(tf.to_int32(tf.reshape(tf.boolean_mask(tensor=self.x, mask=self.mask), [-1])), self.num_emb, 1.0, 0.0) * tf.log(
+                tf.clip_by_value(tf.reshape(tf.boolean_mask(tensor=self.g_predictions, mask=self.mask), [-1, self.num_emb]), 1e-20, 1.0)
+            )
+        ) / tf.reduce_sum(tf.cast(self.mask, tf.float32)) #(self.sequence_length * tf.to_float(self.batch_size))'''
 
     def preprocess_x(self):
         with tf.device("/cpu:0"):

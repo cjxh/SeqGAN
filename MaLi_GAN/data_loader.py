@@ -15,6 +15,7 @@ class DataLoader(object):
         self.pointer = 0
         self.SYNTHETIC = is_synthetic
         self.sentences = []
+        self.seq_lens = []
         self.lexicon = lexicon
         if not is_synthetic:
             self.load_data(data_file)
@@ -32,6 +33,7 @@ class DataLoader(object):
         mask_sequence_stream = []
         print "Padding sentences in token_stream to " + str(self.max_length)  + "..."
         for sentence in tqdm(self.token_stream):
+            self.seq_lens.append(len(sentence))
             mask_sequence = [True] * len(sentence)
             if len(sentence) < self.max_length:
                 for i in range(self.max_length - len(sentence)):
@@ -80,13 +82,10 @@ class DataLoader(object):
 
     def next_batch(self):
         ret = self.mini_batches[self.pointer]
-<<<<<<< HEAD
         ret_mask = self.mini_batches_mask[self.pointer]
-=======
-        ret_mask = self.mini_batches[self.pointer]
->>>>>>> 0641172ece9e02c0962a2da119d26909db4a5ae6
+        ret_seq_lens = self.mini_batches_seq_lens[self.pointer]
         self.pointer = (self.pointer + 1) % self.num_batch
-        return ret, ret_mask
+        return ret, ret_mask, ret_seq_lens
 
     def reset_pointer(self):
         self.pointer = 0
@@ -96,16 +95,20 @@ class DataLoader(object):
         shuffle_idx = np.random.permutation(np.arange(num_sentences))
         shuffled_data = []
         shuffled_mask = []
+        shuffled_seq_lens = []
         for i in shuffle_idx:
             shuffled_data.append(self.token_stream[i])
             shuffled_mask.append(self.mask_sequence_stream[i])
-        return shuffled_data, shuffled_mask
+            shuffled_seq_lens.append(self.seq_lens[i])
+        return shuffled_data, shuffled_mask, shuffled_seq_lens
 
     def mini_batch(self, batch_size):
         self.num_batch = len(self.token_stream) / batch_size
-        shuffled_stream, shuffled_mask = self.shuffle_sentences()
+        shuffled_stream, shuffled_mask, shuffled_seq_lens = self.shuffle_sentences()
         shuffled_stream = shuffled_stream[:self.num_batch * batch_size]
         shuffled_mask = shuffled_mask[:self.num_batch * batch_size]
+        shuffled_seq_lens = shuffled_seq_lens[:self.num_batch * batch_size]
         self.mini_batches = np.split(np.array(shuffled_stream), self.num_batch, 0)
         self.mini_batches_mask = np.split(np.array(shuffled_mask), self.num_batch, 0)
+        self.mini_batches_seq_lens = np.split(np.array(shuffled_seq_lens), self.num_batch, 0)
         self.pointer = 0
