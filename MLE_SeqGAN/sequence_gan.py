@@ -101,6 +101,17 @@ def pre_train_epoch(sess, trainable_model, data_loader):
     return np.mean(supervised_g_losses)
 
 
+def maligan_rewards(sess, gen, cnn, x):
+    preds = sess.run(cnn.ypred_for_auc, {input_x: x})
+    rewards = RD(preds[:, 1])
+    denom = np.sum(rewards)
+    baseline = 1.0/(rewards.shape[0])
+    rewards = np.divide(rewards, denom) - baseline
+    return np.repeat(rewards, x.shape[1], axis=1)
+
+def RD(self, reward):
+    return reward / (1-reward)
+
 def main():
     random.seed(SEED)
     np.random.seed(SEED)
@@ -240,9 +251,11 @@ def main():
     for total_batch in range(TOTAL_BATCH):
         for it in range(TRAIN_ITER):
             samples = generator.generate(sess)
-            rewards = rollout.get_reward(sess, samples, 16, cnn)
+            #rewards = rollout.get_reward(sess, samples, 16, cnn)
+            rewards = maligan_rewards(sess, gen, cnn, samples)
             feed = {generator.x: samples, generator.rewards: rewards}
             _, g_loss = sess.run([generator.g_updates, generator.g_loss], feed_dict=feed)
+
 
         if total_batch % 1 == 0 or total_batch == TOTAL_BATCH - 1:
             test_perp = np.exp(target_loss(sess, generator, likelihood_data_loader))
@@ -273,8 +286,8 @@ def main():
                         cnn.input_y: y_batch,
                         cnn.dropout_keep_prob: dis_dropout_keep_prob
                     }
-                    #_, step, accuracy = sess.run([dis_train_op, dis_global_step, cnn.accuracy], feed)
-                    accuracy = sess.run(cnn.accuracy, feed)
+                    _, step, accuracy = sess.run([dis_train_op, dis_global_step, cnn.accuracy], feed)
+                    #accuracy = sess.run(cnn.accuracy, feed)
                     batch_accs.append(accuracy)
                 except ValueError:
                     pass
