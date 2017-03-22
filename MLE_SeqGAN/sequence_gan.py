@@ -102,14 +102,15 @@ def pre_train_epoch(sess, trainable_model, data_loader):
 
 
 def maligan_rewards(sess, gen, cnn, x):
-    preds = sess.run(cnn.ypred_for_auc, {input_x: x})
+    preds = sess.run(cnn.ypred_for_auc, {cnn.input_x: x, cnn.dropout_keep_prob: 1.0})
     rewards = RD(preds[:, 1])
     denom = np.sum(rewards)
     baseline = 1.0/(rewards.shape[0])
     rewards = np.divide(rewards, denom) - baseline
-    return np.repeat(rewards, x.shape[1], axis=1)
+    print rewards
+    return np.tile(np.reshape(rewards, (rewards.shape[0], 1)), x.shape[1])
 
-def RD(self, reward):
+def RD(reward):
     return reward / (1-reward)
 
 def main():
@@ -252,7 +253,7 @@ def main():
         for it in range(TRAIN_ITER):
             samples = generator.generate(sess)
             #rewards = rollout.get_reward(sess, samples, 16, cnn)
-            rewards = maligan_rewards(sess, gen, cnn, samples)
+            rewards = maligan_rewards(sess, generator, cnn, samples)
             feed = {generator.x: samples, generator.rewards: rewards}
             _, g_loss = sess.run([generator.g_updates, generator.g_loss], feed_dict=feed)
 
@@ -271,7 +272,7 @@ def main():
 
         # generate for discriminator
         print 'Start training discriminator'
-        for _ in range(1):
+        for _ in range(5):
             generate_samples(sess, generator, BATCH_SIZE, generated_num, negative_file)
 
             dis_x_train, dis_y_train = dis_data_loader.load_train_data(positive_file, negative_file)

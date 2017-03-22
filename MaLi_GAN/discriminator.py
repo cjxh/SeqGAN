@@ -2,12 +2,12 @@ import tensorflow as tf
 import numpy as np
 
 class Discriminator(object):
-    def __init__(self, sequence_length, batch_size, pretrained_embeddings):
+    def __init__(self, sequence_length, batch_size, n_classes, pretrained_embeddings):
         print "Initializing discriminator..."
         self.batch_size = 2 * batch_size
         print 'batch_size: ' + str(self.batch_size)
         self.sequence_length = sequence_length
-        self.n_classes = 2
+        self.n_classes = n_classes
         self.n_hidden = 10
         self.g_embeddings = pretrained_embeddings
 
@@ -73,8 +73,8 @@ class Discriminator(object):
         self.weights = tf.get_variable('weights', initializer=tf.random_normal([2*self.n_hidden, self.n_classes]))
         self.biases = tf.get_variable('biases', initializer=tf.random_normal([self.n_classes]))
         
-        self.cell_fw = tf.contrib.rnn.GRUCell(self.n_hidden)
-        self.cell_bw = tf.contrib.rnn.GRUCell(self.n_hidden)
+        self.cell_fw = tf.contrib.rnn.DropoutWrapper(tf.contrib.rnn.GRUCell(self.n_hidden), input_keep_prob=0.6)
+        self.cell_bw = tf.contrib.rnn.DropoutWrapper(tf.contrib.rnn.GRUCell(self.n_hidden), input_keep_prob=0.6)
 
         with tf.variable_scope('preds'):
             seqlen = tf.fill(tf.expand_dims(tf.shape(self.input_x)[0], 0), tf.constant(self.sequence_length, dtype=tf.int32))

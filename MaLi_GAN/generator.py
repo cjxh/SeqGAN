@@ -6,7 +6,7 @@ from tqdm import tqdm
 class Generator(object):
     def __init__(self, num_emb, batch_size, emb_dim, hidden_dim,
                  sequence_length, start_token, m, pretrained_embeddings,
-                 learning_rate=0.001, reward_gamma=0.95):
+                 learning_rate=0.0001, reward_gamma=0.95):
         self.hidden_dim = 200
         self.sequence_length = sequence_length
         self.batch_size = batch_size
@@ -49,7 +49,7 @@ class Generator(object):
         supervised_g_losses = []
         #data_loader.reset_pointer()
 
-        for it in xrange(1):#data_loader.num_batch / 2):
+        for it in xrange(data_loader.num_batch / 2):
             batch, mask_batch, seq_lens = data_loader.next_batch()
             g_loss = self.pretrain_one_step(sess, batch, mask_batch, seq_lens)
             supervised_g_losses.append(g_loss)
@@ -61,7 +61,7 @@ class Generator(object):
         supervised_g_losses = []
         #data_loader.reset_pointer()
 
-        for it in xrange(1):#data_loader.num_batch / 2):
+        for it in xrange(data_loader.num_batch / 2):
             batch, mask_batch, seq_lens = data_loader.next_batch()
             feed = {self.x: batch, self.mask : mask_batch, self.seq_lens: seq_lens}
             g_loss = sess.run(self.pretrain_loss, feed_dict=feed)

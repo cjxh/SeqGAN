@@ -2,6 +2,7 @@ import tensorflow as tf
 import numpy as np
 from data_loader import DataLoader as dl
 from tqdm import tqdm
+import nltk
 from generator import Generator
 from discriminator import Discriminator
 import cPickle as pickle
@@ -39,10 +40,10 @@ saver = tf.train.Saver()
 sess = tf.Session()
 sess.run(tf.global_variables_initializer())
 
-#saver.restore(sess, './pretrained')
+saver.restore(sess, './pretrained')
 
 # pretrain 
-#perplexities = cPickle.load(open('pretrain_perplexities.txt'))
+perplexities = pickle.load(open('pretrain_perplexities.txt'))
 perplexities = []
 for i in range(500):
     loss = gen.pretrain_one_epoch(sess, pos_dl)
@@ -53,6 +54,9 @@ for i in range(500):
         sentences = gen.generate(sess, 5)
         english = []
         for sentence in sentences:
+            references, _, _= pos_dl.next_batch()
+            BLEUscore = nltk.translate.bleu_score.sentence_bleu(references, list(sentence), (1.0 / 3, 1.0 / 3, 1.0 / 3))
+            print "BLEUscore: " + str(BLEUscore)
             temp = []
             for idx in sentence:
                 temp.append(reverse_lexicon[idx])
